@@ -20,6 +20,8 @@
 #define PI ((float)3.141592653589793238462643383279502884197169399375105820)
 #define PI2 ((float)6.2831853071795864769252867665590057683943387987502116)
 
+using namespace vr::illumination;
+
 /*! \fn void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray
  * *prhs[] ) \brief computes Heneyey-Greenstein LUT provides an interface to
  * matlab \param nlhs number of left-sided arguments (results) \param plhs

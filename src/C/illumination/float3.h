@@ -9,6 +9,8 @@
  *
  */
 
+#include <math.h>
+
 #ifndef _FLOAT3_H_
 #define _FLOAT3_H_
 
