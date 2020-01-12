@@ -36,10 +36,8 @@ _Volume Renderer for use with MATLAB®_ was originally developed as a student pr
 ## License
 This work is licensed under [GNU Affero General Public License version 3](https://opensource.org/licenses/AGPL-3.0).
 
+---
 
 ## References
 1.  <a id="ref1"></a>Ronneberger, O and Liu, K and Rath, M and Ruess, D and Mueller, T and Skibbe, H and Drayer, B and Schmidt, T and Filippi, A and Nitschke, R and Brox, T and Burkhardt, H and Driever, W. **[ViBE-Z: A Framework for 3D Virtual Colocalization Analysis in Zebrafish Larval Brains](http://lmb.informatik.uni-freiburg.de//Publications/2012/RLSDSBB12) .** 2012. _Nature Methods,_ 9(7):735--742. [↩](#a1)
 
----
-
-<a name="f1">1</a>: 
