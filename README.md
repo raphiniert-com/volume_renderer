@@ -27,8 +27,8 @@ The following video demonstrates the power of the renderer<sup id="a2">[2](#f2)<
 
 
 ## License
-This work is licensed under [GNU Affero General Public License version 3](https://opensource.org/licenses/AGPL-3.0).
-
+- This work is licensed under [GNU Affero General Public License version 3](https://opensource.org/licenses/AGPL-3.0). 
+- Copyright 2020 © [Raphael Scheible](raphiniert.com)
 
 ## Acknowledgments
 _Volume Renderer for use with MATLAB®_ was originally developed as a student project by Raphael Scheible at University of Freiburg supervised by [Benjamin Ummenhofer](http://lmb.informatik.uni-freiburg.de/people/ummenhof/) and [apl. Prof. Dr. Olaf Ronneberger](http://lmb.informatik.uni-freiburg.de/people/ronneber/).
