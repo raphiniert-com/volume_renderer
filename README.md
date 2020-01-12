@@ -23,7 +23,7 @@ Either, enter `src/matlab` to run code and place your matlab renderer code there
 ## Example
 The following video demonstrates the power of the renderer<sup id="a2">[2](#f2)</sup>:
 
-[![Demo CountPages alpha](https://share.gifyoutube.com/k8K5pY.gif)](https://www.youtube.com/watch?v=HdYV1dY41qw)
+[![Demo CountPages alpha](docs/example_vr_zebra.gif)](https://www.youtube.com/watch?v=HdYV1dY41qw)
 
 
 ## Acknowledgments
