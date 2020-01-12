@@ -1,4 +1,4 @@
-# Volume Renderer for use with MATLAB®
+# Volume Renderer <small>for use with MATLAB®</small>
 
 _Volume Renderer <small>for use with MATLAB®</small>_ extends MATLAB® by a GPU-accelerated volume render command that handles 3D volumetric data. The core application is implemented in C/C++. To guarantee fast computations the render process computes on the GPU. This is realized by NVIDIA® CUDA®. Furthermore _Volume Renderer <small>for use with MATLAB®</small>_ provides the following features:
 
@@ -11,9 +11,7 @@ _Volume Renderer <small>for use with MATLAB®</small>_ extends MATLAB® by a GPU
 ## Requirements
 *   CUDA® capable NVIDIA® graphics device with at least [Kepler™](https://en.wikipedia.org/wiki/Kepler_(microarchitecture)) architecture
 *   Linux computer (64 bit) with installed NVIDIA® driver and CUDA®
-*   MATLAB® (*) with [Parallel Computing Tookbox](https://mathworks.com/products/parallel-computing.html) for compilation (requires [mexcuda](https://de.mathworks.com/help/parallel-computing/mexcuda.html))
-
-<small>* tested and developed under R2019b; might work from R2015b.</small>
+*   MATLAB® <sup id="a1">[1](#f1)</sup> with [Parallel Computing Tookbox](https://mathworks.com/products/parallel-computing.html) for compilation (requires [mexcuda](https://de.mathworks.com/help/parallel-computing/mexcuda.html))
 
 
 ## Installation
@@ -23,10 +21,9 @@ Either, enter `src/matlab` to run code and place your matlab renderer code there
 
 
 ## Example
-The following video demonstrates the power of the renderer.
-<small>provided by Benjamin Ummenhofer, data from <sup id="a1">[1](#ref1)</sup><small>
+The following video demonstrates the power of the renderer<sup id="a2">[2](#f2)</sup>:
 
-[![Demo CountPages alpha](https://j.gifs.com/k8K5pY.gif)](https://www.youtube.com/watch?v=HdYV1dY41qw)
+[![Demo CountPages alpha](https://share.gifyoutube.com/k8K5pY.gif)](https://www.youtube.com/watch?v=HdYV1dY41qw)
 
 
 ## Acknowledgments
@@ -36,8 +33,11 @@ _Volume Renderer for use with MATLAB®_ was originally developed as a student pr
 ## License
 This work is licensed under [GNU Affero General Public License version 3](https://opensource.org/licenses/AGPL-3.0).
 
----
 
 ## References
-1.  <a id="ref1"></a>Ronneberger, O and Liu, K and Rath, M and Ruess, D and Mueller, T and Skibbe, H and Drayer, B and Schmidt, T and Filippi, A and Nitschke, R and Brox, T and Burkhardt, H and Driever, W. **[ViBE-Z: A Framework for 3D Virtual Colocalization Analysis in Zebrafish Larval Brains](http://lmb.informatik.uni-freiburg.de//Publications/2012/RLSDSBB12) .** 2012. _Nature Methods,_ 9(7):735--742. [↩](#a1)
+[1]  <a id="ref1"></a>Ronneberger, O and Liu, K and Rath, M and Ruess, D and Mueller, T and Skibbe, H and Drayer, B and Schmidt, T and Filippi, A and Nitschke, R and Brox, T and Burkhardt, H and Driever, W. **[ViBE-Z: A Framework for 3D Virtual Colocalization Analysis in Zebrafish Larval Brains](http://lmb.informatik.uni-freiburg.de//Publications/2012/RLSDSBB12) .** 2012. _Nature Methods,_ 9(7):735--742. [↩](#r1)
 
+---
+
+<a id="f1"></a>1: tested and developed under R2019b; might work from R2015b [↩](#a1)
+<a id="f2"></a>2: provided by Benjamin Ummenhofer, data from <a id="r1">[[1]](#ref1)</a> [↩](#a2)
