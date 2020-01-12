@@ -76,11 +76,11 @@ void selectBestDevice() {
   int devID = cutGetMaxGflopsDeviceId();
   HANDLE_ERROR(cudaSetDevice(devID));
 
-  // #ifdef _DEBUG
-  //   cudaDeviceProp deviceProp;
-  //   HANDLE_ERROR(cudaGetDeviceProperties(&deviceProp, devID));
-  //   printf("> Using CUDA device [%d]: %s\n", devID, deviceProp.name);
-  // #endif
+  #ifdef _DEBUG
+    cudaDeviceProp deviceProp;
+    HANDLE_ERROR(cudaGetDeviceProperties(&deviceProp, devID));
+    printf("> Using CUDA device [%d]: %s\n", devID, deviceProp.name);
+  #endif
 }
 
 /*! \fn RenderOptions  initRender(	const uint aWidth,
