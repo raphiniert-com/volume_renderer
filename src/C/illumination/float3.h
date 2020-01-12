@@ -1,13 +1,19 @@
 /*! \file float3.h
  * 	\author Raphael Scheible <raphael.scheible@uniklinik-freiburg.de>
  * 	\version 1.0
- *  \license This project is released under the GNU Affero General Public License, Version 3
+ *  \license This project is released under the GNU Affero General Public
+ * License, Version 3
  *
- * 	\brief implementation of float3 struct intended for the computation of illumination models
+ * 	\brief implementation of float3 struct intended for the computation of
+ * illumination models
  *
  */
 
+#ifndef _FLOAT3_H_
+#define _FLOAT3_H_
 
+namespace vr {
+namespace illumination {
 /*! \struct float3
  * 	\brief struct of a 3D float
  */
@@ -99,3 +105,7 @@ float3x3 rotateAroundX(float angle) {
   m.col[2].z = c;
   return m;
 }
+} // namespace illumination
+} // namespace vr
+
+#endif // _FLOAT3_H_

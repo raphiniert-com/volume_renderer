@@ -66,10 +66,10 @@ __device__ gradientFunction gradient_functions[2] = {computeGradient,
 __device__ __constant__ gradientMethod dc_activeGradientMethod =
     gradientCompute;
 
-/*! \var mvr::LightSource *d_lightSources
+/*! \var vr::LightSource *d_lightSources
  * 	\brief
  */
-mvr::LightSource *d_lightSources = NULL;
+vr::LightSource *d_lightSources = NULL;
 
 /*! \var __device__ __constant__ size_t c_numLightSources
  * 	\brief
@@ -111,49 +111,49 @@ cudaArray *d_reflectionArray = 0;
  */
 cudaArray *d_illuminationArray = 0;
 
-/*! \var texture<mvr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
+/*! \var texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
  * tex_emission \brief 3D texture for emission lookup
  */
-texture<mvr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
+texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
     tex_emission;
 
-/*! \var texture<mvr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
+/*! \var texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
  * tex_gradientX \brief 3D texture of gradient in x direction used in
  * lookupGradient
  */
-texture<mvr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
+texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
     tex_gradientX;
 
-/*! \var texture<mvr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
+/*! \var texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
  * tex_gradientY \brief 3D texture of gradient in y direction used in
  * lookupGradient
  */
-texture<mvr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
+texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
     tex_gradientY;
 
-/*! \var texture<mvr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
+/*! \var texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
  * tex_gradientZ \brief 3D texture of gradient in z direction used in
  * lookupGradient
  */
-texture<mvr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
+texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
     tex_gradientZ;
 
-/*! \var texture<mvr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
+/*! \var texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
  * tex_absorption \brief 3D texture for absorption lookup
  */
-texture<mvr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
+texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
     tex_absorption;
 
-/*! \var texture<mvr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
+/*! \var texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
  * tex_reflection \brief 3D texture for reflection lookup
  */
-texture<mvr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
+texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
     tex_reflection;
 
-/*! \var texture<mvr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
+/*! \var texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
  * tex_illumination \brief 3D texture for illumination lookup
  */
-texture<mvr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
+texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
     tex_illumination;
 
 /*! \fn int intersectBox(Ray aRay, float3 aBoxmin, float3 aBoxmax, float
@@ -163,7 +163,7 @@ texture<mvr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
  * coordinates. \param aTnear tnear plane. \param aTfar tfar plane. \return 1 if
  * the intersects the box, 0 if not
  */
-__forceinline__ __device__ int intersectBox(mvr::Ray aRay, float3 aBoxmin,
+__forceinline__ __device__ int intersectBox(vr::Ray aRay, float3 aBoxmin,
                                             float3 aBoxmax, float *aTnear,
                                             float *aTfar) {
   int sign[3];
@@ -297,7 +297,7 @@ __forceinline__ __device__ float angle(const float3 &a, const float3 &b) {
 
 /*! \fn float3 shade(const float3& aSamplePosition, const float3 aPosition,
                          const float3 aGradientStep, const float3 aViewPosition,
- const float3 aColor, mvr::LightSource * aLightSources, const float
+ const float3 aColor, vr::LightSource * aLightSources, const float
  aScaleReflection, const float3 aBoxmin, const float3 aBoxmax, const float3
  aBoxScale)
  *  \brief determines the light performed at a voxelposition of all defined
@@ -316,7 +316,7 @@ __forceinline__ __device__ float angle(const float3 &a, const float3 &b) {
  */
 __device__ float3 shade(const float3 &aSamplePosition, const float3 aPosition,
                         const float3 aGradientStep, const float3 aViewPosition,
-                        const float3 aColor, mvr::LightSource *aLightSources,
+                        const float3 aColor, vr::LightSource *aLightSources,
                         const float aScaleReflection, const float3 aBoxmin,
                         const float3 aBoxmax, const float3 aBoxScale) {
   const float scaleReflection = aScaleReflection;
@@ -330,7 +330,7 @@ __device__ float3 shade(const float3 &aSamplePosition, const float3 aPosition,
   float3 result = make_float3(0.f);
 
   for (size_t i = 0; i < c_numLightSources; ++i) {
-    mvr::LightSource lightSource = aLightSources[i];
+    vr::LightSource lightSource = aLightSources[i];
 
     // calculation of angles
     float3 lightPosition = (lightSource.position);
@@ -362,8 +362,8 @@ __device__ float3 shade(const float3 &aSamplePosition, const float3 aPosition,
   return result;
 }
 
-/*! \fn void d_render(float *d_aOutput,  const mvr::RenderOptions aOptions,
-         const float3 aColor, const mvr::LightSource * aLightSources,
+/*! \fn void d_render(float *d_aOutput,  const vr::RenderOptions aOptions,
+         const float3 aColor, const vr::LightSource * aLightSources,
          const float3 aGradientStep)
  *  \brief performs raycasting on the device
  *  \param d_aOutput device pointer of the computed 2D output
@@ -372,9 +372,9 @@ __device__ float3 shade(const float3 &aSamplePosition, const float3 aPosition,
  * 	\param aLightSources pointer to all light sources
  * 	\param aGradientStep step size to a neighbor voxel
  */
-__global__ void d_render(float *d_aOutput, const mvr::RenderOptions aOptions,
+__global__ void d_render(float *d_aOutput, const vr::RenderOptions aOptions,
                          const float3 aColor,
-                         const mvr::LightSource *aLightSources,
+                         const vr::LightSource *aLightSources,
                          const float3 aGradientStep) {
   const uint x = blockIdx.x * blockDim.x + threadIdx.x;
   const uint y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -383,8 +383,8 @@ __global__ void d_render(float *d_aOutput, const mvr::RenderOptions aOptions,
   if ((x >= aOptions.image_width) || (y >= aOptions.image_height))
     return;
 
-  mvr::LightSource *lightSources =
-      const_cast<mvr::LightSource *>(aLightSources);
+  vr::LightSource *lightSources =
+      const_cast<vr::LightSource *>(aLightSources);
   const float tstep = aOptions.tstep;
   const float opacityThreshold = aOptions.opacity_threshold;
   const float scaleAbsorption = aOptions.scale_absorption;
@@ -400,7 +400,7 @@ __global__ void d_render(float *d_aOutput, const mvr::RenderOptions aOptions,
   float v = (y / (float)aOptions.image_height) * 2.0f * ratio - 1.0f * ratio;
 
   // calculate eye ray in world space
-  mvr::Ray eyeRay;
+  vr::Ray eyeRay;
 
   // box scale
   const float3 boxScale = 1.f / (boxMax - boxMin);
@@ -521,8 +521,8 @@ __global__ void d_render(float *d_aOutput, const mvr::RenderOptions aOptions,
   d_aOutput[k + size * 2] = sum.z;
 }
 
-//! MatlabVolumeRenderer functions
-namespace mvr {
+
+namespace vr {
 
 /*! \fn cudaArray* createTextureFromVolume(texture<VolumeType,
  * cudaTextureType3D, cudaReadModeElementType>& aTex, const Volume& aVolume,
@@ -736,5 +736,5 @@ void copyLightSources(const LightSource *aLightSources,
                                   sizeof(size_t)));
 }
 
-} // namespace mvr
+} // namespace vr
 #endif // #ifndef _VOLUMERENDER_KERNEL_CU_

@@ -1,7 +1,8 @@
 /*! \file render.cpp
  * 	\author Raphael Scheible <raphael.scheible@uniklinik-freiburg.de>
  * 	\version 1.0
- * 	\license This project is released under the GNU Affero General Public License, Version 3
+ * 	\license This project is released under the GNU Affero General Public
+ * License, Version 3
  *
  * 	\brief interface to matlab
  */
@@ -15,7 +16,7 @@
 #include <mex.h>
 #include <volumeRender.h>
 
-using namespace mvr;
+using namespace vr;
 
 /*! \fn Volume make_volume(const mxArray* prhs)
  * 	\brief constructing a Volume structure
@@ -231,8 +232,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   const float opacityThreshold = (float)mxGetScalar(prhs[10]);
 
   dim3 block_size = dim3(16, 16);
-  dim3 grid_size = dim3(mvr::iDivUp(imageResolution[1], block_size.x),
-                        mvr::iDivUp(imageResolution[0], block_size.y));
+  dim3 grid_size = dim3(vr::iDivUp(imageResolution[1], block_size.x),
+                        vr::iDivUp(imageResolution[0], block_size.y));
 
   // FIXME: BGR -> RGB
   const float3 color = make_float3((float *)mxGetPr(prhs[11]));

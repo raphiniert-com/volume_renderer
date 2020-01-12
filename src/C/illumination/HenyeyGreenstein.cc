@@ -1,20 +1,20 @@
 /*! \file HenyeyGreenstein.cc
  * 	\author Raphael Scheible <raphael.scheible@uniklinik-freiburg.de>
  * 	\version 1.0
- *  \license This project is released under the GNU Affero General Public License, Version 3
+ *  \license This project is released under the GNU Affero General Public
+ * License, Version 3
  *
  * 	\brief matlab command to generate a LUT with Henyey-Greenstein phase
  * function
  *
  */
 
+#include <float3.h>
 #include <math.h>
 #include <mex.h>
 #include <sstream>
 #include <stdio.h>
 #include <string.h>
-#include <float3.h>
-
 
 #define MIN_ARGS 1
 #define PI ((float)3.141592653589793238462643383279502884197169399375105820)

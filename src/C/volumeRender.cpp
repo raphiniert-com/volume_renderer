@@ -13,8 +13,7 @@
 #include <vector_functions.h>
 #include <volumeRender.h>
 
-//! MatlabVolumeRenderer functions
-namespace mvr {
+namespace vr {
 
 /*! \fn bool operator==( const Volume& a, const Volume& b )
  * 	\brief compares if the data pointer of two volumes are equal
@@ -76,20 +75,22 @@ void selectBestDevice() {
   // int devID = cutGetMaxGflopsDeviceId();
   // HANDLE_ERROR(cudaSetDevice(devID));
 
-// #ifdef _DEBUG
-//   cudaDeviceProp deviceProp;
-//   HANDLE_ERROR(cudaGetDeviceProperties(&deviceProp, devID));
-//   printf("> Using CUDA device [%d]: %s\n", devID, deviceProp.name);
-// #endif
+  // #ifdef _DEBUG
+  //   cudaDeviceProp deviceProp;
+  //   HANDLE_ERROR(cudaGetDeviceProperties(&deviceProp, devID));
+  //   printf("> Using CUDA device [%d]: %s\n", devID, deviceProp.name);
+  // #endif
 }
 
-/*! \fn RenderOptions  initRender(	const uint aWidth, const uint aHeight,
-                                                        const float
- aScaleEmission, const float aScaleAbsorption, const float aScaleReflection,
-                                                        const float3&
- aElementSizeUm, const float4x3& aRotationMatrix, const float aOpacityThreshold,
-                                                        const cudaExtent&
- aVolumeSize)
+/*! \fn RenderOptions  initRender(	const uint aWidth,
+                                    const uint aHeight,
+                                    const float aScaleEmission,
+                                    const float aScaleAbsorption,
+                                    const float aScaleReflection,
+                                    const float3& aElementSizeUm,
+                                    const float4x3& aRotationMatrix,
+                                    const float aOpacityThreshold,
+                                    const cudaExtent& aVolumeSize)
  * 	\brief computes some properties and selects device on that the render
  computes
  *  \param aWidth width of the rendered image
@@ -227,7 +228,7 @@ float *render(const dim3 &block_size, const dim3 &grid_size,
   cudaFree(d_output);
   freeCudaBuffers();
   cudaDeviceSynchronize();
-  
+
   cudaDeviceReset();
 
 #ifdef _DEBUG
@@ -267,4 +268,4 @@ float *readRawFile(const char *filename) {
   return (float *)data;
 }
 #endif
-} // namespace mvr
+} // namespace vr
