@@ -12,7 +12,7 @@ classdef VolumeRender < handle
         Color=[1,1,1];              % 
         
         VolumeEmission=false;       % 
-        VolumeReflection=1;         % 
+        VolumeReflection=Volume(1);         % 
         VolumeAbsorption=false;     % 
         VolumeGradientX=false;      % 
         VolumeGradientY=false;      % 
@@ -24,7 +24,7 @@ classdef VolumeRender < handle
         ScaleAbsorption=1.0;        % 
         
         CameraXOffset=0;
-        StereoOutput='red-cyan';
+        StereoOutput=StereoRenderMode.RedCyan;
         
         RotationMatrix = [1,0,0;
                           0,1,0;
@@ -90,13 +90,13 @@ classdef VolumeRender < handle
                 rect=[0 0 (size(rightImage,2)-delta) size(rightImage,1)];
                 rightImage=imcrop(rightImage, rect);
                 
-                if( strcmp(obj.StereoOutput,'red-cyan') )
+                if( strcmp(obj.StereoOutput,StereoRenderMode.RedCyan) )
                     % RGB - anaglyph
                     image=zeros([size(leftImage,1), size(leftImage,2), 3]);
                     image(:,:,1) = leftImage(:,:,1);
                     image(:,:,2) = rightImage(:,:,2);
                     image(:,:,3) = rightImage(:,:,3);
-                elseif( strcmp(obj.StereoOutput, 'left-right-horizontal') )
+                elseif( strcmp(obj.StereoOutput, StereoRenderMode.LeftRightHorizontal) )
                     image = [leftImage, rightImage];
                 end
                     
@@ -127,6 +127,7 @@ classdef VolumeRender < handle
         function set.LightSources(obj, val)
             % ensure correct dimension
             validate = [size(val,1) == 1, ...
+                        ismatrix(val), ...
                         ndims(val) == 2, ...
                         isa(val, 'LightSource')
                         ];
