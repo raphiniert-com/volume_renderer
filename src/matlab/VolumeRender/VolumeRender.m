@@ -46,18 +46,18 @@ classdef VolumeRender < handle
             betarad=obj.deg2rad(beta);
             gammarad=obj.deg2rad(gamma);
             
-            RotationX = [1,0,0;
-                         0, cos(alpharad), -sin(alpharad);
-                         0, sin(alpharad), cos(alpharad)];
-            RotationY = [cos(betarad),0,sin(betarad);
+            RotationX = [0,0,1;
+                         -sin(alpharad), cos(alpharad), 0;
+                         cos(alpharad), sin(alpharad), 0];
+            RotationY = [sin(betarad),0,cos(betarad);
                          0,1,0;
-                         -sin(betarad),0,cos(betarad)];
-            RotationZ = [cos(gammarad), -sin(gammarad), 0;
-                         sin(gammarad), cos(gammarad), 0;
-                         0,0,1];
+                        cos(betarad),0,-sin(betarad)];
+            RotationZ = [0, -sin(gammarad), cos(gammarad);
+                         0, cos(gammarad), sin(gammarad);
+                         1,0,0];
 
             obj.RotationMatrix = obj.RotationMatrix * ...
-                                 RotationX * RotationY * RotationZ;
+                                 RotationZ * RotationY * RotationX;
         end
         
         function image = render(obj)
