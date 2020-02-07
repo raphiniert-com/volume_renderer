@@ -36,28 +36,24 @@ classdef VolumeRender < handle
         function obj = VolumeRender()
         end
 
-        function rotate(obj, gamma, beta, alpha)
+        function rotate(obj, alpha, beta, gamma)
             % rotation of the viewmatrix
+            % alpha     rotation around col
             % gamma     rotation adound lev
             % beta      rotation around row
-            % alpha     rotation around col
             
-            alpharad=obj.deg2rad(alpha);
-            betarad=obj.deg2rad(beta);
-            gammarad=obj.deg2rad(gamma);
-            
-            RotationX = [0,0,1;
-                         -sin(alpharad), cos(alpharad), 0;
-                         cos(alpharad), sin(alpharad), 0];
-            RotationY = [sin(betarad),0,cos(betarad);
+            RotationX = [1,0,0;
+                         0, cosd(alpha), -sind(alpha);
+                         0, sind(alpha), cosd(alpha)];
+            RotationY = [cosd(beta),0,sind(beta);
                          0,1,0;
-                        cos(betarad),0,-sin(betarad)];
-            RotationZ = [0, -sin(gammarad), cos(gammarad);
-                         0, cos(gammarad), sin(gammarad);
-                         1,0,0];
+                         -sind(beta),0,cosd(beta)];
+            RotationZ = [cosd(gamma), -sind(gamma), 0;
+                         sind(gamma), cosd(gamma), 0;
+                         0,0,1];
 
             obj.RotationMatrix = obj.RotationMatrix * ...
-                                 RotationZ * RotationY * RotationX;
+                                 RotationX * RotationY * RotationZ;
         end
         
         function image = render(obj)
@@ -66,7 +62,7 @@ classdef VolumeRender < handle
             % image     output (3D) image
             
             if (obj.CameraXOffset==0)
-                image=prender(obj, single(obj.CameraXOffset), obj.ImageResolution);
+                image=prender(obj, single(obj.CameraXOffset), flip(obj.ImageResolution));
             else
                 % render 3D (combine the images)
                 base = obj.CameraXOffset/2;
@@ -78,7 +74,7 @@ classdef VolumeRender < handle
                         (2*obj.FocalLength * tan(angleFieldOfview/2)));
                 
                 % render more pixel
-                resolution=obj.ImageResolution + [0, delta];
+                resolution=flip(obj.ImageResolution) + [0, delta];
                 
                 rightImage=prender(obj, base, resolution);
                 leftImage=prender(obj, -base, resolution);
@@ -307,13 +303,15 @@ classdef VolumeRender < handle
                          islogical(obj.VolumeGradientY), ...
                          islogical(obj.VolumeGradientZ)];
 
+            matrix=flip(obj.RotationMatrix);
+
             if (all(not(validate)))
                 image = volumeRender(obj.LightSources, single(obj.VolumeEmission.Data), ...
                                single(obj.VolumeReflection.Data), ...
                                single(obj.VolumeAbsorption.Data), ...
                                single(obj.VolumeIllumination.Data), single(scales), ...
                                single(obj.ElementSizeUm), uint32(resolution), ...
-                               single(obj.RotationMatrix), single(props), ...
+                               single(matrix), single(props), ...
                                single(obj.OpacityThreshold), single(obj.Color), ...
                                single(obj.VolumeGradientX.Data), ...
                                single(obj.VolumeGradientY.Data), ...
@@ -324,16 +322,13 @@ classdef VolumeRender < handle
                                single(obj.VolumeAbsorption.Data), ...
                                single(obj.VolumeIllumination.Data), single(scales), ...
                                single(obj.ElementSizeUm), uint32(resolution), ...
-                               single(obj.RotationMatrix), single(props), ...
+                               single(matrix), single(props), ...
                                single(obj.OpacityThreshold), single(obj.Color));
             end
        end
     end
     
     methods(Access = public,Static = true)
-        function angle_rad = deg2rad(angle_deg)
-            angle_rad = (pi/180.0)*angle_deg;
-        end
         function normalized=normalizeSequence(sequence)
             % Normalizing a multiframe image (4D image) between [0,1]
             % sequence      multiframe image/image sequence
