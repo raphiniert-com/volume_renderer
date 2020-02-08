@@ -33,7 +33,7 @@ emission_main = Volume(data_main);
 
 % setup image size (of the resulting 2D image)
 render.ImageResolution= ...
-    size(emission_main.Data,[2 1]);
+    size(emission_main.Data,[1 2]);
 
 % set render volumes
 render.VolumeEmission = emission_main;

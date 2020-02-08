@@ -19,8 +19,11 @@ elementSizeUm = h5readatt(filename, dataset,'element_size_um');
 
 dataset = '/expression/3A10';
 data_structure = h5read(filename, dataset);
-% elementSizeUm = h5readatt(filename, dataset,'element_size_um');
 emission_structure = Volume(data_structure);
+
+% create volumes
+emission_structure = Volume(data_structure);
+emission_main = Volume(data_main);
 
 % create render object
 render = VolumeRender();
@@ -34,19 +37,18 @@ render.LightSources = LightSource([-15,15,0], [1,1,1]);
 render.ElementSizeUm=elementSizeUm;
 render.FocalLength=3.0;
 render.DistanceToObject = 6;
-render.rotate(90,0,0);
+render.rotate(-90,0,0);
 render.OpacityThreshold=0.95;
 
-% % rotate some more
-% render.rotate(0,45,0);
-% 
+% rotate some more
+render.rotate(0,45,0);
+
 % % setup image size (of the resulting 2D image)
-% render.ImageResolution= size(emission_structure.Data,[2, 1]);
+% render.ImageResolution= size(emission_structure.Data,[1 2]);
 % 
 % % set render volumes
 % render.VolumeEmission=emission_structure;
 % render.VolumeAbsorption=emission_structure;
-% render.VolumeReflection=reflection;
 % render.ScaleReflection=1;
 % 
 % render.Color = [1,1,0];
@@ -58,10 +60,11 @@ render.OpacityThreshold=0.95;
 % data_absorption(1:end, 1:half_size(2), 1:end) = 0;
 % absorptionVolume=Volume(data_absorption);
 % absorptionVolume.resize(half_size);
+% absorptionVolume.normalize(0,1);
 % 
 % render.VolumeEmission=emission_main;
 % render.VolumeAbsorption=absorptionVolume;
-% render.ScaleReflection=0.2;
+% render.ScaleReflection=0.5;
 % render.Color = [1,1,1];
 % 
 % rendered_image_2 = render.render();
@@ -69,15 +72,9 @@ render.OpacityThreshold=0.95;
 % imshow(rendered_image_1+rendered_image_2);
 % return;
 
-% create volumes
-emission_structure = Volume(data_structure);
-emission_main = Volume(data_main);
-
-reflection=Volume([1,1,1;1,1,1;1,1,1]);
-render.VolumeReflection=reflection;
 
 % setup image size (of the resulting 2D image)
-render.ImageResolution=[size(emission_structure.Data,2), size(emission_structure.Data,1)];
+render.ImageResolution=size(emission_structure.Data,[1 2]);
 
 
 nStep=24;
@@ -90,7 +87,6 @@ for i=1:nStep
     % set render volumes
     render.VolumeEmission=emission_structure;
     render.VolumeAbsorption=emission_structure;
-    render.VolumeReflection=reflection;
     render.ScaleReflection=1;
 
     render.Color = [1,1,0];
@@ -102,11 +98,11 @@ for i=1:nStep
     data_absorption(1:end, 1:half_size(2), 1:end) = 0;
     absorptionVolume=Volume(data_absorption);
     absorptionVolume.resize(half_size);
-    min(absorptionVolume.Data(:))
+    absorptionVolume.normalize(0,1);
 
     render.VolumeEmission=emission_main;
     render.VolumeAbsorption=absorptionVolume;
-    render.ScaleReflection=0.2;
+    render.ScaleReflection=0.5;
     render.Color = [1,1,1];
 
     rendered_image_2 = render.render();
