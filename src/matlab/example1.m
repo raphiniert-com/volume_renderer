@@ -25,19 +25,18 @@ render.LightSources = [LightSource([1,2,-3],[0,1,1]), LightSource([0,1,9],[1,0.5
 render.ElementSizeUm=elementSizeUm;
 render.FocalLength=3.0;
 render.DistanceToObject=6;
-render.rotate(140,25,0);
+render.RotationMatrix
+render.rotate(-125,25,0);
+
 render.OpacityThreshold=0.95;
 
-% rotate some more
-%render.rotate(0,-120,0);
 
 % setup image size (of the resulting 2D image)
-render.ImageResolution=size(emission_structure.Data,[2, 1]);
+render.ImageResolution=size(emission_structure.Data,[1, 2]);
 
 % set render volumes
 render.VolumeEmission=emission_structure;
 render.VolumeAbsorption=emission_structure;
-render.VolumeReflection=reflection;
 render.ScaleReflection=1;
 
 render.Color = [1,1,0];
