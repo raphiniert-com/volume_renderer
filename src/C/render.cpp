@@ -95,7 +95,7 @@ void checkFreeDeviceMemory(size_t aNeededRamInBytes) {
 #ifdef _DEBUG
 
   mexPrintf(
-      "\tTotal Memory: %ld MB, Free Memory: %ld MB, Needed Memory: %ld MB\n",
+      "\ttotal memory: %ld MB, free memory: %ld MB, required memory: %ld MB\n",
       totalMemoryInBytes / (1024 * 1024), curAvailMemoryInBytes / (1024 * 1024),
       aNeededRamInBytes / (1024 * 1024));
 
