@@ -50,7 +50,7 @@ rendered_image = zeros([size(emission_main.Data,2), ...
 
 beta = 360/nStep;
 for i=1:nStep
-    display(strcat('image ', num2str(i)));
+    disp(strcat('image ', num2str(i)));
 
     % rotate object
     render.rotate(0,beta,0);
