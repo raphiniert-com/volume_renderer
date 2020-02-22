@@ -26,9 +26,7 @@ classdef VolumeRender < handle
         CameraXOffset=0;
         StereoOutput=StereoRenderMode.RedCyan;
         
-        RotationMatrix = [1,0,0;
-                          0,1,0;
-                          0,0,1];   % 
+        RotationMatrix = eye(3);   % 
         ImageResolution = [0,0];    % 
     end
     methods        
@@ -339,8 +337,8 @@ classdef VolumeRender < handle
             end
             
             % get min/max scalar
-            maxValue=max(max(max(max(sequence))));
-            minValue=min(min(min(min(sequence))));
+            maxValue=max(sequence(:));
+            minValue=min(sequence(:));
             
             normalized=zeros(size(sequence));
             for i=1:size(sequence,4)
@@ -361,13 +359,13 @@ classdef VolumeRender < handle
             blue = ImageRGB(:,:,3);
 
             if (nargin < 2)
-                minValue = min([min(min(red)), min(min(green)), min(min(blue))]);
+                minValue = min([min(red(:)), min(green(:)), min(blue(:))]);
             else
                 minValue = varargin{1};
             end
             
             if (nargin < 3)
-                maxValue = max([max(max(red)), max(max(green)), max(max(blue))]);
+                maxValue = max([max(red(:)), max(green(:)), max(blue(:))]);
             else
                 maxValue = varargin{2};
             end
