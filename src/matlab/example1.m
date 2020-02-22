@@ -43,7 +43,7 @@ render.ScaleReflection=0.4;
 
 render.Color = [1,1,0];
 
-rendered_image_1 = render.render();
+rendered_image_structure = render.render();
 
 absorptionVolume=Volume(data_main);
 absorptionVolume.resize(0.5);
@@ -55,6 +55,6 @@ render.ScaleAbsorption=0.8;
 render.ScaleReflection=1;
 render.Color = [1,1,1];
 
-rendered_image_2 = render.render();
+rendered_image_main = render.render();
 
-imshow(rendered_image_1+rendered_image_2);
+imshow(rendered_image_main+rendered_image_structure);
