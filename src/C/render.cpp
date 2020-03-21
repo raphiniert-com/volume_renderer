@@ -71,16 +71,16 @@ float3 make_float3Inv(float *aPointer) {
   return make_float3(aPointer[2], aPointer[1], aPointer[0]);
 }
 
-/*! \fn void checkFreeDeviceMemory(size_t aNeededRamInBytes)
+/*! \fn void checkFreeDeviceMemory(size_t aRequiredRAMInBytes)
  * 	\brief checks if there is enough free device memory available
- *  \param aNeededRamInBytes needed memory in bytes
+ *  \param aRequiredRAMInBytes needed memory in bytes
  *
  * 	If there is not enough free device memory available the program will be
  * stopped and an error message will be displayed in the matlab interface. The
  * user will be informed how much memory he wanted to allocate and how much
  * 	(free) memory the device offers.
  */
-void checkFreeDeviceMemory(size_t aNeededRamInBytes) {
+void checkFreeDeviceMemory(size_t aRequiredRAMInBytes) {
   size_t totalMemoryInBytes, curAvailMemoryInBytes;
 
   bool isEnough = false;
@@ -97,11 +97,11 @@ void checkFreeDeviceMemory(size_t aNeededRamInBytes) {
   mexPrintf(
       "\ttotal memory: %ld MB, free memory: %ld MB, required memory: %ld MB\n",
       totalMemoryInBytes / (1024 * 1024), curAvailMemoryInBytes / (1024 * 1024),
-      aNeededRamInBytes / (1024 * 1024));
+      aRequiredRAMInBytes / (1024 * 1024));
 
 #endif
 
-  isEnough = (curAvailMemoryInBytes >= aNeededRamInBytes);
+  isEnough = (curAvailMemoryInBytes >= aRequiredRAMInBytes);
   // cuCtxDetach(context); // Destroy context
 
   if (!isEnough) {
@@ -111,7 +111,7 @@ void checkFreeDeviceMemory(size_t aNeededRamInBytes) {
        << "\n"
        << "\tFree Memory (MB): \t" << curAvailMemoryInBytes / (1024 * 1024)
        << "\n"
-       << "\tNeeded Memory (MB): \t" << aNeededRamInBytes / (1024 * 1024)
+       << "\tNeeded Memory (MB): \t" << aRequiredRAMInBytes / (1024 * 1024)
        << "\n";
 
     mexErrMsgTxt(os.str().c_str());
@@ -140,7 +140,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   const mxArray *mxVolumeLight = prhs[4];
 
   // compute the size of data copied to the GPU
-  size_t neededRam(0);
+  size_t requiredRAM(0);
 
   if (!(mxIsClass(mxLightSources, "logical") ||
         mxIsClass(mxVolumeLight, "logical"))) {
@@ -179,7 +179,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     setIlluminationTexture(volumeLight);
 
     // compute needed RAM
-    neededRam += (volumeLight.extent.width * volumeLight.extent.depth *
+    requiredRAM += (volumeLight.extent.width * volumeLight.extent.depth *
                       volumeLight.extent.height * sizeof(VolumeType) +
 
                   numLightSources * sizeof(LightSource));
@@ -203,7 +203,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   mexPrintf("Resolution: %dx%d\n", imageResolution[1], imageResolution[0]);
 #endif
 
-  neededRam += imageResolution[0] * imageResolution[1] * sizeof(VolumeType) * 3;
+  requiredRAM += imageResolution[0] * imageResolution[1] * sizeof(VolumeType) * 3;
 
   // lev, row, col -> x,y,z
   float4x3 rotationMatrix;
@@ -244,20 +244,20 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
                  volumeEmission.extent); // TODO: analyze Volume Size
   // compute needed ram
   // emission is needed in anycase
-  neededRam += volumeEmission.extent.width * volumeEmission.extent.depth *
+  requiredRAM += volumeEmission.extent.width * volumeEmission.extent.depth *
                volumeEmission.extent.height * sizeof(VolumeType);
 
   // check if absorption is unique
   if (volumeEmission != volumeAbsorption &&
       volumeReflection != volumeAbsorption) {
-    neededRam += volumeAbsorption.extent.width * volumeAbsorption.extent.depth *
+    requiredRAM += volumeAbsorption.extent.width * volumeAbsorption.extent.depth *
                  volumeAbsorption.extent.height * sizeof(VolumeType);
   }
 
   // check if reflection is unique
   if (volumeEmission != volumeReflection &&
       volumeReflection != volumeAbsorption) {
-    neededRam += volumeReflection.extent.width * volumeReflection.extent.depth *
+    requiredRAM += volumeReflection.extent.width * volumeReflection.extent.depth *
                  volumeReflection.extent.height * sizeof(VolumeType);
   }
 
@@ -269,7 +269,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
     setGradientTextures(dx, dy, dz);
 
-    neededRam += (dx.extent.width * dx.extent.depth * dx.extent.height *
+    requiredRAM += (dx.extent.width * dx.extent.depth * dx.extent.height *
                       sizeof(VolumeType) +
 
                   dy.extent.width * dy.extent.depth * dy.extent.height *
@@ -281,7 +281,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
   // check if there is enough free VRam
   // if not program will stop with an error msg
-  checkFreeDeviceMemory(neededRam);
+  checkFreeDeviceMemory(requiredRAM);
 
   // switch
   mwSize dim[3] = {imageResolution[0], imageResolution[1], 3};

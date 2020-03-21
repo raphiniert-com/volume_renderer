@@ -46,7 +46,8 @@ classdef Volume < handle
         % linear normalization
            oldMax=obj.max();
            oldMin=obj.min();
-           obj.Data=(obj.Data-oldMin) * (newMax - newMin)/(oldMax-oldMin) + newMin;
+           obj.Data=(obj.Data-oldMin) * (newMax - newMin)/ ...
+                    (oldMax-oldMin) + newMin;
         end
     end
 end
