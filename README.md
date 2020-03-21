@@ -11,7 +11,9 @@ _Volume Renderer <small>for use with MATLAB®</small>_ extends MATLAB® by a GPU
 ## Requirements
 *   CUDA® capable NVIDIA® graphics device with at least [Kepler™](https://en.wikipedia.org/wiki/Kepler_(microarchitecture)) architecture
 *   Linux computer (64 bit) with installed NVIDIA® driver and CUDA®
-*   MATLAB® <sup id="a1">[1](#f1)</sup> with [Parallel Computing Tookbox](https://mathworks.com/products/parallel-computing.html) for compilation (requires [mexcuda](https://de.mathworks.com/help/parallel-computing/mexcuda.html))
+*   MATLAB® <sup id="a1">[1](#f1)</sup> with
+  * [Image Processing Toolbox](https://www.mathworks.com/products/image.html)
+  * [Parallel Computing Tookbox](https://mathworks.com/products/parallel-computing.html) for compilation (requires [mexcuda](https://de.mathworks.com/help/parallel-computing/mexcuda.html))
 
 
 ## Installation
