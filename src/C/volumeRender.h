@@ -137,11 +137,6 @@ int iDivUp(int a, int b);
 
 inline int cutGetMaxGflopsDeviceId();
 
-// for test
-#ifndef MATLAB_MEX_FILE
-Volume readVolumeFile(const char *filename, cudaExtent &dim, float3 &dim_mm);
-float *readRawFile(const char *filename);
-#endif
 }; // namespace vr
 
 #endif // _VOLUMERENDER_H_

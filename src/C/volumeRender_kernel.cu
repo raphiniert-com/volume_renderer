@@ -17,13 +17,11 @@
 #include <vector>
 #include <volumeRender.h>
 
-#define ONE_OVER_2PI                                                           \
-  ((float)0.1591549430918953357688837633725143620344596457404564)
+#define ONE_OVER_2PI ((float)0.1591549430918953357688837633725143620344596457404564)
 #define PI2 ((float)6.2831853071795864769252867665590057683943387987502116)
 
 /*! \var typedef unsigned int  uint
- * 	\brief mapps unsigned int to uint
- * 	Details.
+ * 	\brief mapps unsigned int to uint Details.
  */
 typedef unsigned int uint;
 
@@ -33,8 +31,8 @@ typedef unsigned int uint;
 typedef unsigned char uchar;
 
 /*! \var typedef float3 (*gradientFunction)(const float3, const float3,
- * 				const float3, const float3, const float3, const
- * float3) \brief function pointer to gradientFunction that returns a gradient
+ * 				const float3, const float3, const float3, const float3) 
+ *  \brief function pointer to gradientFunction that returns a gradient
  */
 typedef float3 (*gradientFunction)(const float3, const float3, const float3,
                                    const float3, const float3, const float3);
@@ -53,9 +51,8 @@ __device__ float3 computeGradient(const float3, const float3, const float3,
 __device__ float3 lookupGradient(const float3, const float3, const float3,
                                  const float3, const float3, const float3);
 
-/*! \var __device__ gradientFunction gradient_functions[2] = { computeGradient,
- * lookupGradient }; \brief Contains function pointer of possible lookup
- * functions
+/*! \var __device__ gradientFunction gradient_functions[2] = { computeGradient, lookupGradient }; 
+ *  \brief Contains function pointer of possible lookup functions
  */
 __device__ gradientFunction gradient_functions[2] = {computeGradient,
                                                      lookupGradient};
@@ -111,57 +108,56 @@ cudaArray *d_reflectionArray = 0;
  */
 cudaArray *d_illuminationArray = 0;
 
-/*! \var texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
- * tex_emission \brief 3D texture for emission lookup
+/*! \var texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType> tex_emission 
+ *  \brief 3D texture for emission lookup
  */
 texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
     tex_emission;
 
-/*! \var texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
- * tex_gradientX \brief 3D texture of gradient in x direction used in
- * lookupGradient
+/*! \var texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType> tex_gradientX 
+ *  \brief 3D texture of gradient in x direction used in lookupGradient
  */
 texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
     tex_gradientX;
 
-/*! \var texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
- * tex_gradientY \brief 3D texture of gradient in y direction used in
- * lookupGradient
+/*! \var texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType> tex_gradientY 
+ *  \brief 3D texture of gradient in y direction used in lookupGradient
  */
 texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
     tex_gradientY;
 
-/*! \var texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
- * tex_gradientZ \brief 3D texture of gradient in z direction used in
- * lookupGradient
+/*! \var texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType> tex_gradientZ 
+ *  \brief 3D texture of gradient in z direction used in lookupGradient
  */
 texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
     tex_gradientZ;
 
-/*! \var texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
- * tex_absorption \brief 3D texture for absorption lookup
+/*! \var texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType> tex_absorption 
+ *  \brief 3D texture for absorption lookup
  */
 texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
     tex_absorption;
 
-/*! \var texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
- * tex_reflection \brief 3D texture for reflection lookup
+/*! \var texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType> tex_reflection 
+ *  \brief 3D texture for reflection lookup
  */
 texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
     tex_reflection;
 
-/*! \var texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
- * tex_illumination \brief 3D texture for illumination lookup
+/*! \var texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType> tex_illumination 
+ *  \brief 3D texture for illumination lookup
  */
 texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
     tex_illumination;
 
-/*! \fn int intersectBox(Ray aRay, float3 aBoxmin, float3 aBoxmax, float
- * *aTnear, float *aTfar) \brief Intersect ray with a box. (see
- * http://jgt.akpeters.com/papers/WilliamsEtAl05) \param aRay ray tested for
- * intersection. \param aBoxmin min box coordinates. \param aBoxmax max box
- * coordinates. \param aTnear tnear plane. \param aTfar tfar plane. \return 1 if
- * the intersects the box, 0 if not
+/*! \fn int intersectBox(Ray aRay, float3 aBoxmin, float3 aBoxmax, float *aTnear, float *aTfar) 
+ *  \brief Intersect ray with a box. (see http://jgt.akpeters.com/papers/WilliamsEtAl05) 
+ *  \param aRay ray tested for intersection. 
+ *  \param aBoxmin min box coordinates. 
+ *  \param aBoxmax max box coordinates. 
+ *  \param aTnear tnear plane. 
+ *  \param aTfar tfar plane. 
+ *  \return 1 if the intersects the box, 0 if not
  */
 __forceinline__ __device__ int intersectBox(vr::Ray aRay, float3 aBoxmin,
                                             float3 aBoxmax, float *aTnear,
@@ -296,10 +292,10 @@ __forceinline__ __device__ float angle(const float3 &a, const float3 &b) {
 }
 
 /*! \fn float3 shade(const float3& aSamplePosition, const float3 aPosition,
-                         const float3 aGradientStep, const float3 aViewPosition,
- const float3 aColor, vr::LightSource * aLightSources, const float
- aScaleReflection, const float3 aBoxmin, const float3 aBoxmax, const float3
- aBoxScale)
+                     const float3 aGradientStep, const float3 aViewPosition,
+                     const float3 aColor, vr::LightSource * aLightSources, 
+                     const float aScaleReflection, const float3 aBoxmin, 
+                     const float3 aBoxmax, const float3 aBoxScale)
  *  \brief determines the light performed at a voxelposition of all defined
  lightsources
  * 			depending on the undelying illumination texture/model
@@ -596,10 +592,11 @@ void setIlluminationTexture(const Volume &aVolume) {
   createTextureFromVolume(tex_illumination, aVolume, d_illuminationArray);
 }
 
-/*! \fn cudaArray* setGradientTextures(const Volume& aDx, const Volume& aDy,
- * const Volume& aDz) \brief copies gradient volumes from host to device \param
- * aDx volume of gradient in x direction \param aDy volume of gradient in y
- * direction \param aDz volume of gradient in z direction
+/*! \fn cudaArray* setGradientTextures(const Volume& aDx, const Volume& aDy, const Volume& aDz) 
+ * \brief copies gradient volumes from host to device 
+ * \param aDx volume of gradient in x direction 
+ * \param aDy volume of gradient in y direction 
+ * \param aDz volume of gradient in z direction
  */
 void setGradientTextures(const Volume &aDx, const Volume &aDy,
                          const Volume &aDz) {
@@ -616,8 +613,7 @@ void setGradientTextures(const Volume &aDx, const Volume &aDy,
 /*! \fn void initCuda(const Volume& aVolumeEmission,
                const Volume& aVolumeAbsorption,
                const Volume& aVolumeReflection)
- *  \brief Copies volume data to device and binds textures to the appropriate
- data.
+ *  \brief Copies volume data to device and binds textures to the appropriate data.
  *         Data of one volume can be assigned to multiple textures.
  *  \param aVolumeEmission emission volume
  *  \param aVolumeAbsorption absorption volume
