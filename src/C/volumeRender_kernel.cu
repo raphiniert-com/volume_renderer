@@ -151,7 +151,7 @@ texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
     tex_illumination;
 
 /*! \fn int intersectBox(Ray aRay, float3 aBoxmin, float3 aBoxmax, float *aTnear, float *aTfar) 
- *  \brief Intersect ray with a box. (see http://jgt.akpeters.com/papers/WilliamsEtAl05) 
+ *  \brief Intersect ray with a box. (see https://dl.acm.org/doi/abs/10.1145/1198555.1198748) 
  *  \param aRay ray tested for intersection. 
  *  \param aBoxmin min box coordinates. 
  *  \param aBoxmax max box coordinates. 
