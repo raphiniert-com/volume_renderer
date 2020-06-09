@@ -273,6 +273,8 @@ float *render(const dim3 &block_size, const dim3 &grid_size,
   HANDLE_ERROR(cudaMalloc((void **)&d_output, size));
   HANDLE_ERROR(cudaMemset(d_output, 0, size));
 
+  HANDLE_ERROR(cudaDeviceSynchronize());
+
   const float3 gradientStep = make_float3(1.f / aVolumeEmission.extent.width,
                                           1.f / aVolumeEmission.extent.height,
                                           1.f / aVolumeEmission.extent.depth);
@@ -294,11 +296,11 @@ float *render(const dim3 &block_size, const dim3 &grid_size,
 #endif
 
   // free device memory
-  cudaFree(d_output);
-  freeCudaBuffers();
-  cudaDeviceSynchronize();
+  HANDLE_ERROR(cudaFree(d_output));
+  HANDLE_ERROR(freeCudaBuffers());
+  HANDLE_ERROR(cudaDeviceSynchronize());
 
-  cudaDeviceReset();
+  HANDLE_ERROR(cudaDeviceReset());
 
 #ifdef _DEBUG
   printf("finished rendering..\n");
@@ -306,35 +308,4 @@ float *render(const dim3 &block_size, const dim3 &grid_size,
 
   return readback;
 }
-
-// only for test, undocumented
-#ifndef MATLAB_MEX_FILE
-Volume readVolumeFile(const char *filename, cudaExtent &dim, float3 &dim_mm) {
-  Volume data = make_volume(readRawFile(filename), dim);
-  for (int i = 0; i < dim.width * dim.height * dim.depth; ++i) {
-    data.data[i] = fabsf(data.data[i]);
-  }
-
-  return data;
-}
-
-float *readRawFile(const char *filename) {
-  FILE *fp = fopen(filename, "rb");
-  if (!fp) {
-    fprintf(stderr, "Error opening file '%s'\n", filename);
-    exit(EXIT_FAILURE);
-  }
-
-  // obtain file size:
-  fseek(fp, 0, SEEK_END);
-  long size = ftell(fp);
-  rewind(fp);
-
-  void *data = malloc(size);
-  size_t read = fread(data, 4, size, fp);
-  fclose(fp);
-
-  return (float *)data;
-}
-#endif
 } // namespace vr
