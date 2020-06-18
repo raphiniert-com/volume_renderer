@@ -30,5 +30,5 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
   );
 
   // assign it as return value
-  data[0]=(int64_t)ms.count();
+  data[0]=(uint64_t)ms.count();
 }

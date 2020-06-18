@@ -3,7 +3,7 @@
 _Volume Renderer <small>for use with MATLAB®</small>_ extends MATLAB® by a GPU-accelerated volume render command that handles 3D volumetric data. The core application is implemented in C/C++. To guarantee fast computations the render process computes on the GPU. This is realized by NVIDIA® CUDA®. Furthermore _Volume Renderer <small>for use with MATLAB®</small>_ provides the following features:
 
 *   **Special memory management:** Due to restricted GPU memory and the requirement to render more than one volume in one scene, we developed a special memory management to enable the rendering of huge data sets in separate rendering passes. Afterward these separately rendered images are combined to one image using MATLAB®.
-*   **Efficient data transfer:** The bottleneck of a GPU application is the transfer of data from host to device. Therefore, we implemented an efficient data transfer mechanism in order to keep the transfer load low<sup id="a3">[2](#ref2)</sup>.
+*   **Efficient data transfer:** The bottleneck of a GPU application is the transfer of data from host to device. Therefore, we implemented an efficient data transfer mechanism in order to keep the data load low.
 *   **Generic illumination model:** We developed a generic illumination model that is easy to extend with other illumination functions. The provided function is the Henyey-Greenstein phase function.
 *   **Stereo rendering:** In some use cases there is a nice feature to work with stereo images. Thus, the renderer offers the possibility to render off-axis stereo images.
 *   **High usability:** To enable a high usability a MATLAB® interface consisting of several MATLAB® classes has been developed. Due to this interface it is uncomplicated to generate movies.
@@ -38,7 +38,6 @@ _Volume Renderer for use with MATLAB®_ was originally developed as a student pr
 
 ## References
 [1]  <a id="ref1"></a>Ronneberger, O and Liu, K and Rath, M and Ruess, D and Mueller, T and Skibbe, H and Drayer, B and Schmidt, T and Filippi, A and Nitschke, R and Brox, T and Burkhardt, H and Driever, W. **[ViBE-Z: A Framework for 3D Virtual Colocalization Analysis in Zebrafish Larval Brains](http://lmb.informatik.uni-freiburg.de//Publications/2012/RLSDSBB12) .** 2012. _Nature Methods,_ 9(7):735--742. [↩](#r1)
-[2]  <a id="ref2"></a>Woodford, O **Example MATLAB class wrapper for a C++ class" MATLAB Central File Exchange** (https://www.mathworks.com/matlabcentral/fileexchange/38964-example-matlab-class-wrapper-for-a-c-class), _MATLAB Central File Exchange_. Retrieved June 9, 2020. [↩](#a3)
 ---
 
 <a id="f1"></a>1: tested and developed under R2019b; might work from R2015b [↩](#a1)  

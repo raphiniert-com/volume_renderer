@@ -1,8 +1,7 @@
 /*! \file render.cpp
  * 	\author Raphael Scheible <raphael.scheible@uniklinik-freiburg.de>
  * 	\version 1.0
- * 	\license This project is released under the GNU Affero General Public
- * License, Version 3
+ * 	\license This project is released under the GNU Affero General Public License, Version 3 
  *
  * 	\brief interface to matlab
  */
@@ -10,6 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <stdint.h>
 #include <common.h>
 #include <cuda_runtime.h>
 #include <cuda_runtime_api.h>
@@ -20,29 +20,32 @@ using namespace vr;
 
 /*! \fn Volume make_volume(const mxArray* prhs)
  * 	\brief constructing a Volume structure
- *  \param prhs pointer to the matlab volume
+ *  \param mxVolume pointer to the matlab volume
  *  \return structure of type Volume
  */
-Volume make_volume(const mxArray *prhs) {
-  const mxArray *arrData = prhs;
-  const size_t *dimArray = mxGetDimensions(arrData);
+Volume make_volume(const mxArray *mxVolume) {
+  mxArray *mxVolumeData = mxGetProperty(mxVolume, 0, "Data");
+  uint64_t *mxVolumeTimeLastUpdate =
+      (uint64_t *)mxGetPr(mxGetProperty(mxVolume, 0, "TimeLastUpdate"));
 
-  float *data = (float *)mxGetPr(arrData);
+  const size_t *dimArray = mxGetDimensions(mxVolumeData);
 
-  float depth(1);
+  uint64_t last_update = mxVolumeTimeLastUpdate[0];
+  float *data = (float *)mxGetPr(mxVolumeData);
+
+  float depth = 1;
 
 #ifdef _DEBUG
-  mexPrintf("Volume:\n\t#dimensions: %d\n", mxGetNumberOfDimensions(arrData));
+  mexPrintf("Volume:\n\t#dimensions: %d\n", mxGetNumberOfDimensions(mxVolumeData));
 #endif
 
   // since mxGetNumberOfDimensions allways returns 2 or greater this works
-  if (mxGetNumberOfDimensions(arrData) == 3)
+  if (mxGetNumberOfDimensions(mxVolumeData) == 3)
     depth = (float)dimArray[2];
 
 #ifdef _DEBUG
-  if (mxGetNumberOfDimensions(arrData) > 2)
-    mexPrintf("\tresolution: %dx%dx%d\n", dimArray[0], dimArray[1],
-              dimArray[2]);
+  if (mxGetNumberOfDimensions(mxVolumeData) > 2)
+    mexPrintf("\tresolution: %dx%dx%d\n", dimArray[0], dimArray[1], dimArray[2]);
   else
     mexPrintf("\tresolution: %dx%d\n", dimArray[0], dimArray[1]);
 #endif
@@ -50,7 +53,7 @@ Volume make_volume(const mxArray *prhs) {
   cudaExtent extent =
       make_cudaExtent((float)dimArray[0], (float)dimArray[1], depth);
 
-  return make_volume((float *)data, extent);
+  return make_volume(data, last_update, extent);
 }
 
 /*! \fn float3 make_float3(float * aPointer)
@@ -118,13 +121,16 @@ void checkFreeDeviceMemory(size_t aRequiredRAMInBytes) {
   }
 }
 
-#define MIN_ARGS 12
+#define MIN_ARGS 13
 
-/*! \fn void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray
- * *prhs[] ) \brief connects matlab with the renderer \param nlhs number of
- * left-sided arguments (results) \param plhs pointer that points to the
- * left-sided arguments \param nrhs number of right arguments (parameters)
- * 	\param prhs pointer that points to the right arguments
+// TODO: mxGetPr -> mxGetData (https://de.mathworks.com/matlabcentral/answers/132523-same-same-but-different-mxgetpr-and-mxgetdata)
+
+/*! \fn void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[] ) 
+ *  \brief connects matlab with the renderer 
+ *  \param nlhs number of left-sided arguments (results) 
+ *  \param plhs pointer that points to the left-sided arguments 
+ *  \param nrhs number of right arguments (parameters)
+ *  \param prhs pointer that points to the right arguments
  */
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   if (nrhs == 0)
@@ -186,9 +192,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   }
 
   // reading all volume data from the matlab class Volume
-  Volume volumeEmission = make_volume(prhs[1]);
+  const Volume volumeEmission   = make_volume(prhs[1]);
   const Volume volumeReflection = make_volume(prhs[2]);
   const Volume volumeAbsorption = make_volume(prhs[3]);
+
+  uint64_t timeLastRender = * (uint64_t*) prhs[12];
 
   // 0: emission
   // 1: reflection
@@ -207,13 +215,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
   // lev, row, col -> x,y,z
   float4x3 rotationMatrix;
-  rotationMatrix.m[0] = make_float3(ptrRotationMatrix[2], ptrRotationMatrix[1],
+  rotationMatrix.m[0] = make_float3(ptrRotationMatrix[2], 
+                                    ptrRotationMatrix[1],
                                     ptrRotationMatrix[0]);
 
-  rotationMatrix.m[1] = make_float3(ptrRotationMatrix[5], ptrRotationMatrix[4],
+  rotationMatrix.m[1] = make_float3(ptrRotationMatrix[5], 
+                                    ptrRotationMatrix[4],
                                     ptrRotationMatrix[3]);
 
-  rotationMatrix.m[2] = make_float3(ptrRotationMatrix[8], ptrRotationMatrix[7],
+  rotationMatrix.m[2] = make_float3(ptrRotationMatrix[8], 
+                                    ptrRotationMatrix[7],
                                     ptrRotationMatrix[6]);
   rotationMatrix.m[3] =
       make_float3(properties[0], properties[1], properties[2]);
@@ -225,8 +236,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
             "\t%f %f %f\n",
             rotationMatrix.m[0].x, rotationMatrix.m[0].y, rotationMatrix.m[0].z,
             rotationMatrix.m[1].x, rotationMatrix.m[1].y, rotationMatrix.m[1].z,
-            rotationMatrix.m[2].x, rotationMatrix.m[2].y,
-            rotationMatrix.m[2].z);
+            rotationMatrix.m[2].x, rotationMatrix.m[2].y, rotationMatrix.m[2].z);
 #endif
 
   const float opacityThreshold = (float)mxGetScalar(prhs[10]);
@@ -235,17 +245,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   dim3 grid_size = dim3(vr::iDivUp(imageResolution[1], block_size.x),
                         vr::iDivUp(imageResolution[0], block_size.y));
 
-  // FIXME: BGR -> RGB
   const float3 color = make_float3((float *)mxGetPr(prhs[11]));
 
   RenderOptions options =
       initRender(imageResolution[1], imageResolution[0], scales[0], scales[1],
                  scales[2], elementSizeUm, rotationMatrix, opacityThreshold,
-                 volumeEmission.extent); // TODO: analyze Volume Size
-  // compute needed ram
-  // emission is needed in anycase
+                 volumeEmission.extent); // TODO: analyze Volume size (nice to have)
+  // compute required memory
+  // emission is required in any case
   requiredRAM += volumeEmission.extent.width * volumeEmission.extent.depth *
-               volumeEmission.extent.height * sizeof(VolumeType);
+                 volumeEmission.extent.height * sizeof(VolumeType);
 
   // check if absorption is unique
   if (volumeEmission != volumeAbsorption &&
@@ -260,6 +269,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     requiredRAM += volumeReflection.extent.width * volumeReflection.extent.depth *
                  volumeReflection.extent.height * sizeof(VolumeType);
   }
+
+  mexPrintf("pointer %p", (void *)volumeEmission.data);
 
   // if gradients are passed through
   if (nrhs == MIN_ARGS + 3) {

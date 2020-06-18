@@ -30,6 +30,7 @@ render.rotate(0,-45,0);
 
 % create volumes
 emission_main = Volume(data_main);
+emission_main.resize(size(emission_main.Data)/2);
 
 % setup image size (of the resulting 2D image)
 render.ImageResolution= ...

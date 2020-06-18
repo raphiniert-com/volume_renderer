@@ -7,6 +7,7 @@
  *
  */
 
+#include <stdint.h>
 #include <assert.h>
 #include <common.h>
 #include <cuda_runtime.h>
@@ -66,9 +67,11 @@ struct Volume {
   cudaExtent extent;
   /*! The memory size the volume uses */
   size_t memory_size;
+  /*! timestamp of last data change */
+  uint64_t last_update;
 };
 
-Volume make_volume(float *data, cudaExtent &extent);
+Volume make_volume(float *data, uint64_t last_update, cudaExtent &extent);
 
 bool operator==(const Volume &a, const Volume &b);
 bool operator!=(const Volume &a, const Volume &b);

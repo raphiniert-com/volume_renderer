@@ -1,12 +1,17 @@
 classdef Volume < handle
     %For explanation see documentation (pdf)
     
-    properties
+    properties(SetObservable)
         Data=[];
+    end
+
+    properties
+        TimeLastUpdate=[];
     end
     
     methods
         function v=Volume(data)
+            addlistener(v,'Data','PostSet',@propEventHandler);
             v.Data=single(data);
         end
 
@@ -16,7 +21,7 @@ classdef Volume < handle
         
         function resize(obj, newsize)
             if (ndims(obj.Data) == 3)
-                obj.Data = imresize3(obj.Data, newsize);
+                obj.Data=imresize3(obj.Data, newsize);
             else
                 obj.Data=imresize(obj.Data,newsize);
             end
@@ -50,4 +55,16 @@ classdef Volume < handle
                     (oldMax-oldMin) + newMin;
         end
     end
+end
+
+% called whenever data of a volume is set/changed
+function propEventHandler(~,eventData)
+   switch eventData.Source.Name % Get property name
+      case 'Data'
+         switch eventData.EventName % Get the event name
+            case 'PostSet'
+                % set TimeLastUpdate to the current timestamp
+                eventData.AffectedObject.TimeLastUpdate = timestamp;
+         end
+   end
 end

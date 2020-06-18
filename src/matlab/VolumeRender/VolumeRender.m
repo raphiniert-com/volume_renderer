@@ -1,37 +1,43 @@
 classdef VolumeRender < handle
     % For explanation see documentation (pdf)
     properties
-        FocalLength=0.0;            % 
-        DistanceToObject=0.0;       % 
-        OpacityThreshold=0.95;      % 
+        FocalLength(1,1)      = 0.0;
+        DistanceToObject(1,1) = 0.0;
+        OpacityThreshold(1,1) = 0.95;
         
-        ElementSizeUm=[1,1,1];      % 
+        LightSources(1,:)     = false;
         
-        LightSources=false;         % 
-        
-        Color=[1,1,1];              % 
-        
-        VolumeEmission=false;       % 
-        VolumeReflection=Volume(1);         % 
-        VolumeAbsorption=false;     % 
-        VolumeGradientX=false;      % 
-        VolumeGradientY=false;      % 
-        VolumeGradientZ=false;      % 
-        VolumeIllumination=false;   % 
+        Color(1,3)            = [1,1,1];
  
-        ScaleEmission=1.0;          % 
-        ScaleReflection=1.0;        % 
-        ScaleAbsorption=1.0;        % 
+        ScaleEmission(1,1)    = 1.0;
+        ScaleReflection(1,1)  = 1.0;
+        ScaleAbsorption(1,1)  = 1.0;
         
-        CameraXOffset=0;
-        StereoOutput=StereoRenderMode.RedCyan;
+        CameraXOffset(1,1)    = 0;
+        StereoOutput StereoRenderMode = StereoRenderMode.RedCyan;
         
-        RotationMatrix = eye(3);   % 
-        ImageResolution = [0,0];    % 
+        ElementSizeUm(1,3)    = [1,1,1];
+        RotationMatrix(3,3)   = eye(3);
+        ImageResolution(1,2)  = [0,0];
+        
+        VolumeReflection      = Volume(1);
+        
+        VolumeEmission        = false;
+        VolumeAbsorption      = false;
+        VolumeGradientX       = false;
+        VolumeGradientY       = false;
+        VolumeGradientZ       = false;
+        VolumeIllumination    = false;
     end
+    
+    properties
+        TimeLastRender = uint64(0);
+    end
+    
     methods        
         % construct
-        function obj = VolumeRender()
+        function obj = VolumeRender
+
         end
 
         function rotate(obj, alpha, beta, gamma)
@@ -60,13 +66,11 @@ classdef VolumeRender < handle
             % image     output (3D) image
             
             if (obj.CameraXOffset==0)
-                image=prender(obj, single(obj.CameraXOffset), flip(obj.ImageResolution));
+                image=p_render(obj, single(obj.CameraXOffset), flip(obj.ImageResolution));
             else
                 % render 3D (combine the images)
                 base = obj.CameraXOffset/2;
                 
-                
-                %angleFieldOfview=2*atan(obj.ImageResolution(2)/(2*obj.FocalLength));
                 angleFieldOfview=2*atan(1/obj.FocalLength);
                 delta = round((base * obj.ImageResolution(2)) / ...
                         (2*obj.FocalLength * tan(angleFieldOfview/2)));
@@ -74,8 +78,8 @@ classdef VolumeRender < handle
                 % render more pixel
                 resolution=flip(obj.ImageResolution) + [0, delta];
                 
-                rightImage=prender(obj, base, resolution);
-                leftImage=prender(obj, -base, resolution);
+                rightImage=p_render(obj, base, resolution);
+                leftImage=p_render(obj, -base, resolution);
                 
                 % combine the 2 images, crop delta
                 rect=[(delta+1) 0 size(leftImage,2) size(leftImage,1)];
@@ -84,7 +88,7 @@ classdef VolumeRender < handle
                 rect=[0 0 (size(rightImage,2)-delta) size(rightImage,1)];
                 rightImage=imcrop(rightImage, rect);
                 
-                if( strcmp(obj.StereoOutput,StereoRenderMode.RedCyan) )
+                if (strcmp(obj.StereoOutput,StereoRenderMode.RedCyan))
                     % RGB - anaglyph
                     image=zeros([size(leftImage,1), size(leftImage,2), 3]);
                     image(:,:,1) = leftImage(:,:,1);
@@ -100,32 +104,9 @@ classdef VolumeRender < handle
        
     % set methods
     methods
-        function set.ElementSizeUm(obj, val)
-            if (isequal(size(val), [1,3]))
-                obj.ElementSizeUm = val;
-            elseif (isequal(size(val), [3,1]))
-                obj.ElementSizeUm = val'; % transpose it
-            else
-                error('dimensions of ImageResolution must be [1,3]');
-            end
-        end
-        
-        function set.Color(obj, val)
-            if (isequal(size(val), [1,3]))
-                obj.Color = val;
-            else
-                error('dimensions of ImageResolution must be [1,3] and values between 0 and 1');
-            end
-        end
-        
         function set.LightSources(obj, val)
-            % ensure correct dimension
-            validate = [size(val,1) == 1, ...
-                        ismatrix(val), ...
-                        ndims(val) == 2, ...
-                        isa(val, 'LightSource')
-                        ];
-            if (all(validate))
+            % ensure correct type
+            if (all(isa(val, 'LightSource')))
                 obj.LightSources = val;
             else
                 error('LightSources must be a 1xN vector with data of type LightSource!');
@@ -190,38 +171,6 @@ classdef VolumeRender < handle
             end
         end
         
-        function set.FocalLength(obj, val)
-            if (isequal(size(val), [1,1]))
-                obj.FocalLength = val;
-            else
-                error('dimensions of ImageResolution must be a scalar');
-            end
-        end
-        
-        function set.DistanceToObject(obj, val)
-            if (isequal(size(val), [1,1]))
-                obj.DistanceToObject = val;
-            else
-                error('dimensions of ImageResolution must be a scalar');
-            end
-        end
-        
-        function set.OpacityThreshold(obj, val)
-            if (isequal(size(val), [1,1]))
-                obj.OpacityThreshold = val;
-            else
-                error('dimensions of ImageResolution must be a scalar');
-            end
-        end
-        
-        function set.CameraXOffset(obj, val)
-            if (isequal(size(val), [1,1]))
-                obj.CameraXOffset = val;
-            else
-                error('dimensions of ImageResolution must be a scalar');
-            end
-        end
-        
         function set.StereoOutput(obj, val)
             if (strcmp(val,'red-cyan'))
                 obj.StereoOutput = val;
@@ -231,50 +180,10 @@ classdef VolumeRender < handle
                 error('allowed values are "red-cyan", "left-right-horizontal"');
             end
         end
-        
-        function set.RotationMatrix(obj, val)
-            if (isequal(size(val), [3,3]))
-                    obj.RotationMatrix = val;
-            else
-                error('dimensions of RotationMatrix must be [3,3]');
-            end
-        end
-        
-        function set.ImageResolution(obj, val)
-            if (isequal(size(val), [1,2]))
-                obj.ImageResolution = val;
-            else
-                error('dimensions of ImageResolution must be a [1,2]');
-            end
-        end
-        
-        function set.ScaleEmission(obj, val)
-             if (isequal(size(val), [1,1]))
-                 obj.ScaleEmission = val;
-             else
-                 error('dimensions of ImageResolution must be a scalar');
-             end
-        end
-         
-        function set.ScaleReflection(obj, val)
-             if (isequal(size(val), [1,1]))
-                 obj.ScaleReflection = val;
-             else
-                 error('dimensions of ImageResolution must be a scalar');
-             end
-        end
-         
-        function set.ScaleAbsorption(obj, val)
-             if (isequal(size(val), [1,1]))
-                 obj.ScaleAbsorption = val;
-             else
-                 error('dimensions of ImageResolution must be a scalar');
-             end
-        end
     end % methods
 
     methods(Access = protected)
-       function image = prender(obj, CameraXOffset, resolution)
+       function image = p_render(obj, CameraXOffset, resolution)
             % rendering image on GPU
             % CameraXOffset     offset between 2 cameras
             % resolution        image resolution
@@ -304,25 +213,32 @@ classdef VolumeRender < handle
             matrix=flip(obj.RotationMatrix);
 
             if (all(not(validate)))
-                image = volumeRender(obj.LightSources, single(obj.VolumeEmission.Data), ...
-                               single(obj.VolumeReflection.Data), ...
-                               single(obj.VolumeAbsorption.Data), ...
-                               single(obj.VolumeIllumination.Data), single(scales), ...
-                               single(obj.ElementSizeUm), uint32(resolution), ...
-                               single(matrix), single(props), ...
-                               single(obj.OpacityThreshold), single(obj.Color), ...
-                               single(obj.VolumeGradientX.Data), ...
-                               single(obj.VolumeGradientY.Data), ...
-                               single(obj.VolumeGradientZ.Data));
+                image = volumeRender(  obj.LightSources, ...
+                                       obj.VolumeEmission, ...
+                                       obj.VolumeReflection, ...
+                                       obj.VolumeAbsorption, ...
+                                       obj.VolumeIllumination, single(scales), ...
+                                       single(obj.ElementSizeUm), uint32(resolution), ...
+                                       single(matrix), single(props), ...
+                                       single(obj.OpacityThreshold), single(obj.Color), ...
+                                       obj.TimeLastRender, ...
+                                       obj.VolumeGradientX.Data, ...
+                                       obj.VolumeGradientY.Data, ...
+                                       obj.VolumeGradientZ.Data);
             else
-                image = volumeRender(obj.LightSources, single(obj.VolumeEmission.Data), ...
-                               single(obj.VolumeReflection.Data), ...
-                               single(obj.VolumeAbsorption.Data), ...
-                               single(obj.VolumeIllumination.Data), single(scales), ...
-                               single(obj.ElementSizeUm), uint32(resolution), ...
-                               single(matrix), single(props), ...
-                               single(obj.OpacityThreshold), single(obj.Color));
+                image = volumeRender(  obj.LightSources, ...
+                                       obj.VolumeEmission, ...
+                                       obj.VolumeReflection, ...
+                                       obj.VolumeAbsorption, ...
+                                       obj.VolumeIllumination, single(scales), ...
+                                       single(obj.ElementSizeUm), uint32(resolution), ...
+                                       single(matrix), single(props), ...
+                                       single(obj.OpacityThreshold), single(obj.Color), ...
+                                       obj.TimeLastRender);
             end
+            
+            % save time of render process
+            obj.TimeLastRender=timestamp;
        end
     end
     
@@ -354,9 +270,9 @@ classdef VolumeRender < handle
             % img           output image
             % varargin      manually chosen minValue, maxValue
 
-            red = ImageRGB(:,:,1);
+            red   = ImageRGB(:,:,1);
             green = ImageRGB(:,:,2);
-            blue = ImageRGB(:,:,3);
+            blue  = ImageRGB(:,:,3);
 
             if (nargin < 2)
                 minValue = min([min(red(:)), min(green(:)), min(blue(:))]);
@@ -386,3 +302,4 @@ classdef VolumeRender < handle
         end
     end
 end % classdef
+

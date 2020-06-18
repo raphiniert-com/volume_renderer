@@ -1,12 +1,12 @@
 /*! \file volumeRender.cpp
  * 	\author Raphael Scheible <raphael.scheible@uniklinik-freiburg.de>
  * 	\version 1.0
- * 	\license This project is released under the GNU Affero General Public
- * License, Version 3
+ * 	\license This project is released under the GNU Affero General Public License, Version 3
  *
  * 	\brief implementation of the methods declared in volumeRender.h
  */
 
+#include <stdint.h>
 #include <cmath>
 #include <cuda_runtime.h>
 #include <helper_math.h>
@@ -56,12 +56,14 @@ LightSource make_lightSource(float3 pos, float3 color) {
 /*! \fn Volume make_volume(float *data, cudaExtent& size)
  * 	\brief constructing a Volume structure
  *  \param data raw data of the volume
+ *  \param last_update timestamp of last data change
  *  \param extent extent of the volume
  *  \return structure of type Volume
  */
-Volume make_volume(float *data, cudaExtent &extent) {
+Volume make_volume(float *data, uint64_t last_update, cudaExtent &extent) {
   Volume volume;
   volume.extent = extent;
+  volume.last_update = last_update;
   volume.data = data;
 
   volume.memory_size =
@@ -92,8 +94,7 @@ void selectBestDevice() {
                                     const float4x3& aRotationMatrix,
                                     const float aOpacityThreshold,
                                     const cudaExtent& aVolumeSize)
- * 	\brief computes some properties and selects device on that the render
- computes
+ * 	\brief computes some properties and selects device on that the render computes
  *  \param aWidth width of the rendered image
  *  \param aHeight height of the rendered image
  *  \param aScaleEmission A value the emission samples are scaled by
@@ -220,8 +221,7 @@ inline int cutGetMaxGflopsDeviceId() {
                const RenderOptions& options, const Volume& volumeEmission,
                const Volume& volumeAbsorption, const Volume& volumeReflection,
                const float3& color)
- * 	\brief computes some properties and selects device on that the render
- computes
+ * 	\brief computes some properties and selects device on that the render  computes
  *  \param block_size CUDA block size
  * 	\param grid_size CUDA grid size
  *  \param aOptions Options of the rendering process
@@ -236,6 +236,7 @@ float *render(const dim3 &block_size, const dim3 &grid_size,
               const Volume &aVolumeAbsorption, const Volume &aVolumeReflection,
               const float3 &aColor) {
   initCuda(aVolumeEmission, aVolumeAbsorption, aVolumeReflection);
+  HANDLE_ERROR(cudaDeviceSynchronize());
 
 #ifdef _DEBUG
   printf("rendering scene..\n");
@@ -285,6 +286,7 @@ float *render(const dim3 &block_size, const dim3 &grid_size,
 
   HANDLE_ERROR(cudaDeviceSynchronize());
   HANDLE_ERROR(cudaMemcpy(readback, d_output, size, cudaMemcpyDeviceToHost));
+  HANDLE_ERROR(cudaDeviceSynchronize());
 
 #ifdef _DEBUG
   for (int i = 0; i < aOptions.image_width * aOptions.image_height * 3;
@@ -297,7 +299,7 @@ float *render(const dim3 &block_size, const dim3 &grid_size,
 
   // free device memory
   HANDLE_ERROR(cudaFree(d_output));
-  HANDLE_ERROR(freeCudaBuffers());
+  freeCudaBuffers();
   HANDLE_ERROR(cudaDeviceSynchronize());
 
   HANDLE_ERROR(cudaDeviceReset());

@@ -3,8 +3,7 @@
  * 	\version 1.0
  *  \license This project is released under the GNU Affero General Public License, Version 3
  *
- * 	\brief include common header files and provides a common CUDA debug
- * function
+ * 	\brief include common header files and provides a common CUDA debug function
  */
 
 #ifndef COMMON_H_
