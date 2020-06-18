@@ -196,7 +196,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   const Volume volumeReflection = make_volume(prhs[2]);
   const Volume volumeAbsorption = make_volume(prhs[3]);
 
-  uint64_t timeLastRender = * (uint64_t*) prhs[12];
+  uint64_t timeLastRender = ((uint64_t*) prhs[12])[0];
 
   // 0: emission
   // 1: reflection
