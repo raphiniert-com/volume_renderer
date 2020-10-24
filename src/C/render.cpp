@@ -270,8 +270,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
                  volumeReflection.extent.height * sizeof(VolumeType);
   }
 
-  mexPrintf("pointer %p", (void *)volumeEmission.data);
-
   // if gradients are passed through
   if (nrhs == MIN_ARGS + 3) {
     Volume dx = make_volume(prhs[MIN_ARGS]);

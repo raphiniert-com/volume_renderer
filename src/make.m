@@ -1,7 +1,8 @@
 % compiling required mex files
 
 % build render command
-mexcuda -cxx -D_DEBUG -largeArrayDims C/render.cpp C/volumeRender.cpp C/volumeRender_kernel.cu -I"../lib/cuda-samples/Common/" -I"C/" -lcuda -output matlab/VolumeRender/volumeRender
+mexcuda -v  -cxx -D_DEBUG -largeArrayDims C/render.cpp C/volumeRender.cpp C/volumeRender_kernel.cu ...
+    -I"../lib/cuda-samples/Common/" -I"C/" -lcuda -output matlab/VolumeRender/volumeRender
 
 % build command to create illumination model
 mex -largeArrayDims C/illumination/HenyeyGreenstein.cc -I"C/illumination/" -output matlab/VolumeRender/HenyeyGreenstein

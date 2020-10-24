@@ -86,7 +86,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
             powf((1.f + powf(aG, 2.f) - (2.f * aG * cosf(angleRad))), 3.f));
 
         // memory layout described on:
-        // http://www.mathworks.de/help/techdoc/matlab_external/f21585.html
+        // https://web.archive.org/web/20120822123134/http://www.mathworks.de/help/techdoc/matlab_external/f21585.html
         int k = c * pageSize + a * volumeSize + b;
 
         outData[k] = 1.f / (4.f * PI) * (numerator / denominator);
