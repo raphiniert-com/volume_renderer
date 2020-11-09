@@ -6,7 +6,7 @@ classdef Volume < handle
     end
 
     properties
-        TimeLastUpdate=[];
+        TimeLastUpdate = uint64(0);
     end
     
     methods

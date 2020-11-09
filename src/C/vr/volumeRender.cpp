@@ -274,7 +274,7 @@ float *render(const dim3 &block_size, const dim3 &grid_size,
   HANDLE_ERROR(cudaMalloc((void **)&d_output, size));
   HANDLE_ERROR(cudaMemset(d_output, 0, size));
 
-  HANDLE_ERROR(cudaDeviceSynchronize());
+  // HANDLE_ERROR(cudaDeviceSynchronize());
 
   const float3 gradientStep = make_float3(1.f / aVolumeEmission.extent.width,
                                           1.f / aVolumeEmission.extent.height,
@@ -284,9 +284,9 @@ float *render(const dim3 &block_size, const dim3 &grid_size,
                 gradientStep);
   // cutilCheckMsg("Error: render_kernel() execution FAILED");
 
-  HANDLE_ERROR(cudaDeviceSynchronize());
+  // HANDLE_ERROR(cudaDeviceSynchronize());
   HANDLE_ERROR(cudaMemcpy(readback, d_output, size, cudaMemcpyDeviceToHost));
-  HANDLE_ERROR(cudaDeviceSynchronize());
+  // HANDLE_ERROR(cudaDeviceSynchronize());
 
 #ifdef _DEBUG
   for (int i = 0; i < aOptions.image_width * aOptions.image_height * 3;
@@ -300,9 +300,9 @@ float *render(const dim3 &block_size, const dim3 &grid_size,
   // free device memory
   HANDLE_ERROR(cudaFree(d_output));
   freeCudaBuffers();
-  HANDLE_ERROR(cudaDeviceSynchronize());
+  // HANDLE_ERROR(cudaDeviceSynchronize());
 
-  HANDLE_ERROR(cudaDeviceReset());
+  // HANDLE_ERROR(cudaDeviceReset());
 
 #ifdef _DEBUG
   printf("finished rendering..\n");

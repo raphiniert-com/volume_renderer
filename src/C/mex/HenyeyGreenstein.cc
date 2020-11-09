@@ -27,7 +27,8 @@ using namespace vr::illumination;
  * pointer that points to the left-sided arguments \param nrhs number of right
  * arguments (parameters) \param prhs pointer that points to the right arguments
  */
-void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) 
+{
   if (nrhs == 0)
     mexErrMsgTxt("no parameter!");
 
