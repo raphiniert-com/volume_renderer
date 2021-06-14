@@ -9,7 +9,7 @@
 
 #include <stdint.h>
 #include <assert.h>
-#include <common.h>
+#include <common/common.h>
 #include <cuda_runtime.h>
 #include <utility>
 #include <vector_types.h>
@@ -102,9 +102,9 @@ struct RenderOptions {
   float3 element_size_um;
   /*! Rotation matrix that is applied to the scene
   last vector: [camera x-offset; focal length; object distance] */
-  float4x3 rotation_matrix; // last vector: [camera x-offset; focal length;
-                            // object distance]
-                            /*! The opacity threshold of the raycasting */
+  float4x3 rotation_matrix;
+  
+  /*! The opacity threshold of the raycasting */
   float opacity_threshold;
   /*! The stepsize of the raycasting */
   float tstep;

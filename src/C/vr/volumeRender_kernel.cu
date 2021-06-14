@@ -15,7 +15,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <vector>
-#include <volumeRender.h>
+#include <vr/volumeRender.h>
 
 #define ONE_OVER_2PI ((float)0.1591549430918953357688837633725143620344596457404564)
 #define PI2 ((float)6.2831853071795864769252867665590057683943387987502116)

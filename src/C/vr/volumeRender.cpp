@@ -12,7 +12,7 @@
 #include <helper_math.h>
 #include <iostream>
 #include <vector_functions.h>
-#include <volumeRender.h>
+#include <vr/volumeRender.h>
 
 namespace vr {
 
