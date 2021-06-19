@@ -10,11 +10,11 @@
 #include <string.h>
 
 #include <stdint.h>
-#include <common.h>
+#include <common/common.h>
 #include <cuda_runtime.h>
 #include <cuda_runtime_api.h>
 #include <mex.h>
-#include <volumeRender.h>
+#include <vr/volumeRender.h>
 
 using namespace vr;
 

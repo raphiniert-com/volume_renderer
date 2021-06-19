@@ -1,6 +1,11 @@
 #include "mex.h"
-#include "class_handle.hpp"
+#include <common/class_handle.hpp>
 #include <string>
+#include <common/common.h>
+#include <helper_math.h>
+#include <cuda_runtime.h>
+#include <stdlib.h>
+#include <vr/volumeRender.h>
 
 // Copyright (c) 2020, Raphael Scheible
 // Copyright (c) 2018, Oliver Woodford
@@ -29,13 +34,90 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+/*! \fn Volume make_volume(float *data, cudaExtent& size)
+ * 	\brief get the most powerful GPU using CUDA Runtime API Version
+ *  taken from https://docs.nvidia.com/cuda/optimus-developer-guide/index.html
+ *  \return device id
+ */
+inline int cutGetMaxGflopsDeviceId() {
+  int current_device = 0, sm_per_multiproc = 0;
+  int max_compute_perf = 0, max_perf_device = 0;
+  int device_count = 0, best_SM_arch = 0;
+  int arch_cores_sm[4] = {1, 8, 32, 192};
+  cudaDeviceProp deviceProp;
+
+  cudaGetDeviceCount(&device_count);
+
+  // Find the best major SM Architecture GPU device
+  while (current_device < device_count) {
+    cudaGetDeviceProperties(&deviceProp, current_device);
+    if (deviceProp.major > 0 && deviceProp.major < 9999) {
+      best_SM_arch = max(best_SM_arch, deviceProp.major);
+    }
+    current_device++;
+  }
+
+  // Find the best CUDA capable GPU device
+  current_device = 0;
+  while (current_device < device_count) {
+    cudaGetDeviceProperties(&deviceProp, current_device);
+    if (deviceProp.major == 9999 && deviceProp.minor == 9999) {
+      sm_per_multiproc = 1;
+    } else if (deviceProp.major <= 3) {
+      sm_per_multiproc = arch_cores_sm[deviceProp.major];
+    } else { // Device has SM major > 3
+      sm_per_multiproc = arch_cores_sm[3];
+    }
+
+    int compute_perf = deviceProp.multiProcessorCount * sm_per_multiproc *
+                       deviceProp.clockRate;
+
+    if (compute_perf > max_compute_perf) {
+      // If we find GPU of SM major > 3, search only these
+      if (best_SM_arch > 3) {
+        // If device==best_SM_arch, choose this, or else pass
+        if (deviceProp.major == best_SM_arch) {
+          max_compute_perf = compute_perf;
+          max_perf_device = current_device;
+        }
+      } else {
+        max_compute_perf = compute_perf;
+        max_perf_device = current_device;
+      }
+    }
+    ++current_device;
+  }
+
+  cudaGetDeviceProperties(&deviceProp, max_perf_device);
+
+#ifdef _DEBUG
+  printf("\nDevice %d: \"%s\"\n", max_perf_device, deviceProp.name);
+  printf("Compute Capability   : %d.%d\n", deviceProp.major, deviceProp.minor);
+#endif
+
+  return max_perf_device;
+}
+
+// pick the device with highest Gflops/s
+void selectBestDevice() {
+  // best device is selected automatically
+  int devID = cutGetMaxGflopsDeviceId();
+  HANDLE_ERROR(cudaSetDevice(devID));
+
+  #ifdef _DEBUG
+    cudaDeviceProp deviceProp;
+    HANDLE_ERROR(cudaGetDeviceProperties(&deviceProp, devID));
+    printf("> Using CUDA device [%d]: %s\n", devID, deviceProp.name);
+  #endif
+}
+
 
 // The class that we are interfacing to
 class MManager
 {
 public:
-  MManager() { 
-    
+  MManager() {
+    this->_ptr = rand() % 100;
   };
 
   ~MManager() { 
@@ -43,7 +125,7 @@ public:
   };
 
   void copy_to_device() { 
-    mexPrintf("Copy to device\n");
+    mexPrintf("Copy to device %d\n", this->_ptr);
   };
 
   void reset_device() { 
@@ -66,6 +148,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	if (nrhs < 1 || mxGetString(prhs[0], cmd, sizeof(cmd)))
 		mexErrMsgTxt("First input should be a command string less than 64 characters long.");
         
+  selectBestDevice();
+
   // New
   if (!strcmp("new", cmd)) {
     // Check parameters
