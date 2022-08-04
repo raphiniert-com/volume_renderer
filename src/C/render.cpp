@@ -29,7 +29,7 @@ Volume make_volume(const mxArray *prhs) {
 
   float *data = (float *)mxGetPr(arrData);
 
-  float depth(1);
+  size_t depth(1);
 
 #ifdef _DEBUG
   mexPrintf("Volume:\n\t#dimensions: %d\n", mxGetNumberOfDimensions(arrData));
@@ -37,7 +37,7 @@ Volume make_volume(const mxArray *prhs) {
 
   // since mxGetNumberOfDimensions allways returns 2 or greater this works
   if (mxGetNumberOfDimensions(arrData) == 3)
-    depth = (float)dimArray[2];
+    depth = dimArray[2];
 
 #ifdef _DEBUG
   if (mxGetNumberOfDimensions(arrData) > 2)
@@ -48,7 +48,7 @@ Volume make_volume(const mxArray *prhs) {
 #endif
 
   cudaExtent extent =
-      make_cudaExtent((float)dimArray[0], (float)dimArray[1], depth);
+      make_cudaExtent(dimArray[0], dimArray[1], depth);
 
   return make_volume((float *)data, extent);
 }
@@ -145,7 +145,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   if (!(mxIsClass(mxLightSources, "logical") ||
         mxIsClass(mxVolumeLight, "logical"))) {
     // get size num lights
-    const int numLightSources = mxGetN(mxLightSources);
+    const size_t numLightSources = mxGetN(mxLightSources);
     const Volume volumeLight = make_volume(mxVolumeLight);
 
 #ifdef _DEBUG
@@ -153,7 +153,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 #endif
 
     // setup lightsources
-    LightSource lightSources[numLightSources];
+    LightSource* lightSources = new LightSource[numLightSources];
 
     // read in lightSources
     for (int l = 0; l < numLightSources; ++l) {
@@ -181,8 +181,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     // compute needed RAM
     requiredRAM += (volumeLight.extent.width * volumeLight.extent.depth *
                       volumeLight.extent.height * sizeof(VolumeType) +
-
-                  numLightSources * sizeof(LightSource));
+                      numLightSources * sizeof(LightSource));
   }
 
   // reading all volume data from the matlab class Volume
@@ -195,7 +194,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   // 2: absorption
   const float *scales = reinterpret_cast<float *>(mxGetPr(prhs[5]));
   const float3 elementSizeUm = make_float3Inv((float *)mxGetPr(prhs[6]));
-  const uint *imageResolution = reinterpret_cast<uint *>(mxGetPr(prhs[7]));
+  const size_t *imageResolution = reinterpret_cast<size_t *>(mxGetPr(prhs[7]));
   const float *ptrRotationMatrix = reinterpret_cast<float *>(mxGetPr(prhs[8]));
   const float *properties = (float *)mxGetPr(prhs[9]);
 

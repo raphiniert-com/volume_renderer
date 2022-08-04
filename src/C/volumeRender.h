@@ -79,9 +79,9 @@ bool operator!=(const Volume &a, const Volume &b);
  */
 struct RenderOptions {
   /*! The width of the rendered image */
-  uint image_width;
+  size_t image_width;
   /*! The height of the rendered image */
-  uint image_height;
+  size_t image_height;
 
   /*! A value the emission samples are scaled by */
   float scale_emission;
@@ -108,7 +108,7 @@ struct RenderOptions {
 };
 
 RenderOptions
-initRender(const uint aWidth, const uint aHeight, const float aScaleEmission,
+initRender(const size_t aWidth, const size_t aHeight, const float aScaleEmission,
            const float aScaleReflection, const float aScaleAbsorption,
            const float3 &aElementSizeUm, const float4x3 &aRotationMatrix,
            const float aOpacityThreshold, const cudaExtent &aVolumeSize);

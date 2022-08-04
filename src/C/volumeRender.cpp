@@ -107,7 +107,7 @@ void selectBestDevice() {
  *  \return RenderOptions struct
  */
 RenderOptions
-initRender(const uint aWidth, const uint aHeight, const float aScaleEmission,
+initRender(const size_t aWidth, const size_t aHeight, const float aScaleEmission,
            const float aScaleReflection, const float aScaleAbsorption,
            const float3 &aElementSizeUm, const float4x3 &aRotationMatrix,
            const float aOpacityThreshold, const cudaExtent &aVolumeSize) {
