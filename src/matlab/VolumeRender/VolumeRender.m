@@ -12,7 +12,7 @@ classdef VolumeRender < handle
         Color=[1,1,1];              % 
         
         VolumeEmission=false;       % 
-        VolumeReflection=Volume(1);         % 
+        VolumeReflection=Volume(1); % 
         VolumeAbsorption=false;     % 
         VolumeGradientX=false;      % 
         VolumeGradientY=false;      % 
@@ -27,7 +27,7 @@ classdef VolumeRender < handle
         StereoOutput=StereoRenderMode.RedCyan;
         
         RotationMatrix = eye(3);   % 
-        ImageResolution = [0,0];    % 
+        ImageResolution = [0,0];   % 
     end
     methods        
         % construct
