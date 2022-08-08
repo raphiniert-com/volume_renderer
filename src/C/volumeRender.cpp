@@ -76,7 +76,7 @@ void selectBestDevice() {
   int devID = cutGetMaxGflopsDeviceId();
   HANDLE_ERROR(cudaSetDevice(devID));
 
-  #ifdef _DEBUG
+  #ifdef DEBUG
     cudaDeviceProp deviceProp;
     HANDLE_ERROR(cudaGetDeviceProperties(&deviceProp, devID));
     printf("> Using CUDA device [%d]: %s\n", devID, deviceProp.name);
@@ -208,7 +208,7 @@ inline int cutGetMaxGflopsDeviceId() {
 
   cudaGetDeviceProperties(&deviceProp, max_perf_device);
 
-#ifdef _DEBUG
+#ifdef DEBUG
   printf("\nDevice %d: \"%s\"\n", max_perf_device, deviceProp.name);
   printf("Compute Capability   : %d.%d\n", deviceProp.major, deviceProp.minor);
 #endif
@@ -237,7 +237,7 @@ float *render(const dim3 &block_size, const dim3 &grid_size,
               const float3 &aColor) {
   initCuda(aVolumeEmission, aVolumeAbsorption, aVolumeReflection);
 
-#ifdef _DEBUG
+#ifdef DEBUG
   printf("rendering scene..\n");
 
   // compute memory consumption
@@ -284,7 +284,7 @@ float *render(const dim3 &block_size, const dim3 &grid_size,
   HANDLE_ERROR(cudaDeviceSynchronize());
   HANDLE_ERROR(cudaMemcpy(readback, d_output, size, cudaMemcpyDeviceToHost));
 
-#ifdef _DEBUG
+#ifdef DEBUG
   for (int i = 0; i < aOptions.image_width * aOptions.image_height * 3;
        i += 1000) {
     if (readback[i] < 0)
@@ -300,7 +300,7 @@ float *render(const dim3 &block_size, const dim3 &grid_size,
 
   cudaDeviceReset();
 
-#ifdef _DEBUG
+#ifdef DEBUG
   printf("finished rendering..\n");
 #endif
 

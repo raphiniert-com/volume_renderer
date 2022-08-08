@@ -31,7 +31,7 @@ Volume make_volume(const mxArray *prhs) {
 
   size_t depth(1);
 
-#ifdef _DEBUG
+#ifdef DEBUG
   mexPrintf("Volume:\n\t#dimensions: %d\n", mxGetNumberOfDimensions(arrData));
 #endif
 
@@ -39,7 +39,7 @@ Volume make_volume(const mxArray *prhs) {
   if (mxGetNumberOfDimensions(arrData) == 3)
     depth = dimArray[2];
 
-#ifdef _DEBUG
+#ifdef DEBUG
   if (mxGetNumberOfDimensions(arrData) > 2)
     mexPrintf("\tresolution: %dx%dx%d\n", dimArray[0], dimArray[1],
               dimArray[2]);
@@ -73,7 +73,7 @@ float3 make_float3Inv(float *aPointer) {
 
 /*! \fn void checkFreeDeviceMemory(size_t aRequiredRAMInBytes)
  * 	\brief checks if there is enough free device memory available
- *  \param aRequiredRAMInBytes needed memory in bytes
+ *  \param aRequiredRAMInBytes required memory in bytes
  *
  * 	If there is not enough free device memory available the program will be
  * stopped and an error message will be displayed in the matlab interface. The
@@ -92,7 +92,7 @@ void checkFreeDeviceMemory(size_t aRequiredRAMInBytes) {
 
   // cuMemGetInfo(&curAvailMemoryInBytes, &totalMemoryInBytes);
   cudaMemGetInfo(&curAvailMemoryInBytes, &totalMemoryInBytes);
-#ifdef _DEBUG
+#ifdef DEBUG
 
   mexPrintf(
       "\ttotal memory: %ld MB, free memory: %ld MB, required memory: %ld MB\n",
@@ -111,7 +111,7 @@ void checkFreeDeviceMemory(size_t aRequiredRAMInBytes) {
        << "\n"
        << "\tFree Memory (MB): \t" << curAvailMemoryInBytes / (1024 * 1024)
        << "\n"
-       << "\tNeeded Memory (MB): \t" << aRequiredRAMInBytes / (1024 * 1024)
+       << "\tRequired memory (MB): \t" << aRequiredRAMInBytes / (1024 * 1024)
        << "\n";
 
     mexErrMsgTxt(os.str().c_str());
@@ -148,7 +148,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     const size_t numLightSources = mxGetN(mxLightSources);
     const Volume volumeLight = make_volume(mxVolumeLight);
 
-#ifdef _DEBUG
+#ifdef DEBUG
     mexPrintf("Setting up %d Lightsources\n", numLightSources);
 #endif
 
@@ -166,7 +166,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       lightSources[l] = make_lightSource(make_float3Inv(mxLightPosition),
                                          make_float3(mxLightColor));
 
-#ifdef _DEBUG
+#ifdef DEBUG
       mexPrintf("\t#%d:\tPosition: %f %f %f, \n\t\tColor: %f %f %f\n", l + 1,
                 lightSources[l].position.x, lightSources[l].position.y,
                 lightSources[l].position.z, lightSources[l].color.x,
@@ -198,7 +198,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   const float *ptrRotationMatrix = reinterpret_cast<float *>(mxGetPr(prhs[8]));
   const float *properties = (float *)mxGetPr(prhs[9]);
 
-#ifdef _DEBUG
+#ifdef DEBUG
   mexPrintf("Resolution: %dx%d\n", imageResolution[1], imageResolution[0]);
 #endif
 
@@ -217,7 +217,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   rotationMatrix.m[3] =
       make_float3(properties[0], properties[1], properties[2]);
 
-#ifdef _DEBUG
+#ifdef DEBUG
   mexPrintf("Matrix:\n"
             "\t%f %f %f\n"
             "\t%f %f %f\n"

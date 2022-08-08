@@ -16,10 +16,10 @@
 #include <stdio.h>
 
 #ifdef MATLAB_MEX_FILE
-#include "mex.h"
+#include <mex.h>
 #endif
 
-#ifdef _DEBUG
+#ifdef DEBUG
 
 /*! \fn static void HandleError(cudaError_t err, const char *file, int line)
  *  \brief prints an error message with the codeline where the error occured
@@ -46,7 +46,7 @@ static void HandleError(cudaError_t err, const char *file, int line) {
 #endif
 
 // release does not need CUDA code check to accelerate the code
-#ifdef _DEBUG
+#ifdef DEBUG
 #define HANDLE_ERROR(err) (HandleError(err, __FILE__, __LINE__))
 #else
 #define HANDLE_ERROR(err) (err)

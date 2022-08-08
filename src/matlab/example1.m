@@ -3,7 +3,7 @@
 % add VolumeRender to path
 addpath('VolumeRender');
 
-path='/home/scheiblr/git/raphiniert/volumerenderer/data/';
+path='../../h5-data/';
 
 filename = [path '/ViBE-Z_72hpf_v1.h5']; 
 

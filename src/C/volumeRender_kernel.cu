@@ -630,7 +630,7 @@ void initCuda(const Volume &aVolumeEmission, const Volume &aVolumeAbsorption,
   cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<VolumeType>();
 
   if (aVolumeEmission == aVolumeAbsorption) {
-#ifdef _DEBUG
+#ifdef DEBUG
     printf("Emission = Absorption\n");
 #endif
 
@@ -639,20 +639,20 @@ void initCuda(const Volume &aVolumeEmission, const Volume &aVolumeAbsorption,
   } else {
     cudaArray *d_tmpAbsorptionArray = setAbsorptionTexture(aVolumeAbsorption);
     if (aVolumeAbsorption == aVolumeReflection) {
-#ifdef _DEBUG
+#ifdef DEBUG
       printf("Absorption = Reflection\n");
 #endif
       HANDLE_ERROR(cudaBindTextureToArray(tex_reflection, d_tmpAbsorptionArray,
                                           channelDesc));
     } else {
       if (aVolumeEmission == aVolumeReflection) {
-#ifdef _DEBUG
+#ifdef DEBUG
         printf("Emission = Reflection\n");
 #endif
         HANDLE_ERROR(cudaBindTextureToArray(tex_reflection, d_tmpEmissionArray,
                                             channelDesc));
       } else {
-#ifdef _DEBUG
+#ifdef DEBUG
         printf("All Volumes are unique\n");
 #endif
         setReflectionTexture(aVolumeReflection);
@@ -665,7 +665,7 @@ void initCuda(const Volume &aVolumeEmission, const Volume &aVolumeAbsorption,
 
   // check if reflection == absorption ( == emission)
   if (aVolumeReflection == aVolumeAbsorption) {
-#ifdef _DEBUG
+#ifdef DEBUG
     printf("Absorption = Reflection\n");
 #endif
     HANDLE_ERROR(cudaBindTextureToArray(tex_absorption, d_tmpEmissionArray,

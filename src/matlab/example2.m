@@ -4,7 +4,7 @@
 addpath('VolumeRender');
 
 % folder to the volume files
-path='/home/scheiblr/git/raphiniert/volumerenderer/data/';
+path='../../h5-data/';
 
 filename = [path '/ViBE-Z_72hpf_v1.h5']; dataset = '/anatomy/average_brain';
 
