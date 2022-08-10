@@ -65,7 +65,7 @@ Volume make_volume(float *data, cudaExtent &extent) {
   volume.data = data;
 
   volume.memory_size =
-      extent.width * extent.height * extent.depth * sizeof(VolumeType);
+      extent.width * extent.height * extent.depth * sizeof(VolumeDataType);
 
   return volume;
 }
@@ -265,7 +265,7 @@ float *render(const dim3 &block_size, const dim3 &grid_size,
 
   // allocate host memory
   size_t size(aOptions.image_width * aOptions.image_height *
-              sizeof(VolumeType) * 3);
+              sizeof(VolumeDataType) * 3);
   float *readback = (float *)malloc(size);
 
   // allocate device memory

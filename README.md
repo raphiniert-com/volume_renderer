@@ -6,6 +6,7 @@ _Volume Renderer <small>for use with MATLAB®</small>_ extends MATLAB® by a GPU
 *   **Generic illumination model:** We developed a generic illumination model that is easy to extend with other illumination functions. The provided function is the Henyey-Greenstein phase function.
 *   **Stereo rendering:** In some use cases there is a nice feature to work with stereo images. Thus, the renderer offers the possibility to render off-axis stereo images.
 *   **High usability:** To enable a high usability a MATLAB® interface consisting of several MATLAB® classes has been developed. Due to this interface it is uncomplicated to generate movies.
+*   **Memory Management:** In order to increase the speed of the renderer, volumes are transferred to the GPU if any change of data occured. This is realized by persisting the memory between all render built upon [this code](https://de.mathworks.com/matlabcentral/fileexchange/38964-example-matlab-class-wrapper-for-a-c-class).
 
 
 ## Requirements
@@ -40,5 +41,5 @@ _Volume Renderer for use with MATLAB®_ was originally developed as a student pr
 
 ---
 
-<a id="f1"></a>1: tested and developed under R2019b; might work from R2015b [↩](#a1)  
+<a id="f1"></a>1: tested and developed under R2022a; might work from R2015b [↩](#a1)  
 <a id="f2"></a>2: provided by Benjamin Ummenhofer, data from <a id="r1">[[1]](#ref1)</a> [↩](#a2)

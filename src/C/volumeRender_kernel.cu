@@ -108,47 +108,40 @@ cudaArray *d_reflectionArray = 0;
  */
 cudaArray *d_illuminationArray = 0;
 
-/*! \var texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType> tex_emission 
+/*! \var texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType> tex_emission 
  * \brief 3D texture for emission lookup
  */
-texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
-    tex_emission;
+texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType> tex_emission;
 
-/*! \var texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType> tex_gradientX 
+/*! \var texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType> tex_gradientX 
  *  \brief 3D texture of gradient in x direction used in lookupGradient
  */
-texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
-    tex_gradientX;
+texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType> tex_gradientX;
 
-/*! \var texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType> tex_gradientY 
+/*! \var texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType> tex_gradientY 
  * \brief 3D texture of gradient in y direction used in lookupGradient
  */
-texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
-    tex_gradientY;
+texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType> tex_gradientY;
 
-/*! \var texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType> tex_gradientZ 
+/*! \var texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType> tex_gradientZ 
  *  \brief 3D texture of gradient in z direction used in lookupGradient
  */
-texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
-    tex_gradientZ;
+texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType> tex_gradientZ;
 
-/*! \var texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType> tex_absorption 
+/*! \var texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType> tex_absorption 
  * \brief 3D texture for absorption lookup
  */
-texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
-    tex_absorption;
+texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType> tex_absorption;
 
-/*! \var texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType> tex_reflection 
+/*! \var texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType> tex_reflection 
  *  \brief 3D texture for reflection lookup
  */
-texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
-    tex_reflection;
+texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType> tex_reflection;
 
-/*! \var texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType> tex_illumination 
+/*! \var texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType> tex_illumination 
  *  \brief 3D texture for illumination lookup
  */
-texture<vr::VolumeType, cudaTextureType3D, cudaReadModeElementType>
-    tex_illumination;
+texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType> tex_illumination;
 
 /*! \fn int intersectBox(Ray aRay, float3 aBoxmin, float3 aBoxmax, float *aTnear, float *aTfar) 
  * \brief Intersect ray with a box. (see https://doi.org/10.1080/2151237X.2005.10129188) 
@@ -519,7 +512,7 @@ __global__ void d_render(float *d_aOutput, const vr::RenderOptions aOptions,
 
 namespace vr {
 
-/*! \fn cudaArray* createTextureFromVolume(texture<VolumeType,
+/*! \fn cudaArray* createTextureFromVolume(texture<VolumeDataType,
  *      cudaTextureType3D, cudaReadModeElementType>& aTex, const Volume& aVolume,
  * 			cudaArray* d_aArray, const bool aNormalized=true)
  *  \brief copies Volume from host to device
@@ -529,17 +522,17 @@ namespace vr {
  * 	\return device pointer of the device array
  */
 cudaArray *createTextureFromVolume(
-    texture<VolumeType, cudaTextureType3D, cudaReadModeElementType> &aTex,
+    texture<VolumeDataType, cudaTextureType3D, cudaReadModeElementType> &aTex,
     const Volume &aVolume, cudaArray *d_aArray) {
   // create 3D d_array
-  cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<VolumeType>();
+  cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<VolumeDataType>();
   if (d_aArray == 0)
     HANDLE_ERROR(cudaMalloc3DArray(&d_aArray, &channelDesc, aVolume.extent));
 
   // copy data to 3D d_array
   cudaMemcpy3DParms copyParams = {0};
   copyParams.srcPtr = make_cudaPitchedPtr(
-      aVolume.data, aVolume.extent.width * sizeof(VolumeType),
+      aVolume.data, aVolume.extent.width * sizeof(VolumeDataType),
       aVolume.extent.width, aVolume.extent.height);
   copyParams.dstArray = d_aArray;
   copyParams.extent = aVolume.extent;
@@ -622,7 +615,7 @@ void initCuda(const Volume &aVolumeEmission, const Volume &aVolumeAbsorption,
               const Volume &aVolumeReflection) {
   cudaArray *d_tmpEmissionArray = setEmissionTexture(aVolumeEmission);
 
-  cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<VolumeType>();
+  cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<VolumeDataType>();
 
   if (aVolumeEmission == aVolumeAbsorption) {
 #ifdef DEBUG

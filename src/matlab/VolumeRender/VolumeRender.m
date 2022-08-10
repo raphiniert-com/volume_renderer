@@ -29,12 +29,16 @@ classdef VolumeRender < handle
         RotationMatrix = eye(3);   % 
         ImageResolution = [0,0];   % 
     end
+    properties (SetAccess = private, Hidden = true)
+        objectHandle; % Handle to the underlying C++ memory manager instance
+    end
     methods        
         % construct
-        function obj = VolumeRender()
+        function this = VolumeRender(varargin)
+            this.objectHandle = volumeRender('new', varargin{:});
         end
 
-        function rotate(obj, alpha, beta, gamma)
+        function rotate(this, alpha, beta, gamma)
             % rotation of the viewmatrix
             % alpha     rotation around col
             % gamma     rotation adound lev
@@ -50,32 +54,32 @@ classdef VolumeRender < handle
                          sind(gamma), cosd(gamma), 0;
                          0,0,1];
 
-            obj.RotationMatrix = obj.RotationMatrix * ...
+            this.RotationMatrix = this.RotationMatrix * ...
                                  RotationX * RotationY * RotationZ;
         end
         
-        function image = render(obj)
+        function image = render(this)
             % rendering image. If CmaeraXOffset does not equal 0
             % a 3D anaglyph will be returned
             % image     output (3D) image
             
-            if (obj.CameraXOffset==0)
-                image=prender(obj, single(obj.CameraXOffset), flip(obj.ImageResolution));
+            if (this.CameraXOffset==0)
+                image=prender(this, single(this.CameraXOffset), flip(this.ImageResolution));
             else
                 % render 3D (combine the images)
-                base = obj.CameraXOffset/2;
+                base = this.CameraXOffset/2;
                 
                 
-                %angleFieldOfview=2*atan(obj.ImageResolution(2)/(2*obj.FocalLength));
-                angleFieldOfview=2*atan(1/obj.FocalLength);
-                delta = round((base * obj.ImageResolution(2)) / ...
-                        (2*obj.FocalLength * tan(angleFieldOfview/2)));
+                %angleFieldOfview=2*atan(this.ImageResolution(2)/(2*this.FocalLength));
+                angleFieldOfview=2*atan(1/this.FocalLength);
+                delta = round((base * this.ImageResolution(2)) / ...
+                        (2*this.FocalLength * tan(angleFieldOfview/2)));
 
                 % render more pixel
-                resolution=flip(obj.ImageResolution) + [0, delta];
+                resolution=flip(this.ImageResolution) + [0, delta];
                 
-                rightImage=prender(obj, base, resolution);
-                leftImage=prender(obj, -base, resolution);
+                rightImage=prender(this, base, resolution);
+                leftImage=prender(this, -base, resolution);
                 
                 % combine the 2 images, crop delta
                 rect=[(delta+1) 0 size(leftImage,2) size(leftImage,1)];
@@ -84,13 +88,13 @@ classdef VolumeRender < handle
                 rect=[0 0 (size(rightImage,2)-delta) size(rightImage,1)];
                 rightImage=imcrop(rightImage, rect);
                 
-                if( strcmp(obj.StereoOutput,StereoRenderMode.RedCyan) )
+                if( strcmp(this.StereoOutput,StereoRenderMode.RedCyan) )
                     % RGB - anaglyph
                     image=zeros([size(leftImage,1), size(leftImage,2), 3]);
                     image(:,:,1) = leftImage(:,:,1);
                     image(:,:,2) = rightImage(:,:,2);
                     image(:,:,3) = rightImage(:,:,3);
-                elseif( strcmp(obj.StereoOutput, StereoRenderMode.LeftRightHorizontal) )
+                elseif( strcmp(this.StereoOutput, StereoRenderMode.LeftRightHorizontal) )
                     image = [leftImage, rightImage];
                 end
                     
@@ -100,25 +104,25 @@ classdef VolumeRender < handle
        
     % set methods
     methods
-        function set.ElementSizeUm(obj, val)
+        function set.ElementSizeUm(this, val)
             if (isequal(size(val), [1,3]))
-                obj.ElementSizeUm = val;
+                this.ElementSizeUm = val;
             elseif (isequal(size(val), [3,1]))
-                obj.ElementSizeUm = val'; % transpose it
+                this.ElementSizeUm = val'; % transpose it
             else
                 error('dimensions of ImageResolution must be [1,3]');
             end
         end
         
-        function set.Color(obj, val)
+        function set.Color(this, val)
             if (isequal(size(val), [1,3]))
-                obj.Color = val;
+                this.Color = val;
             else
                 error('dimensions of ImageResolution must be [1,3] and values between 0 and 1');
             end
         end
         
-        function set.LightSources(obj, val)
+        function set.LightSources(this, val)
             % ensure correct dimension
             validate = [size(val,1) == 1, ...
                         ismatrix(val), ...
@@ -126,147 +130,147 @@ classdef VolumeRender < handle
                         isa(val, 'LightSource')
                         ];
             if (all(validate))
-                obj.LightSources = val;
+                this.LightSources = val;
             else
                 error('LightSources must be a 1xN vector with data of type LightSource!');
             end
         end
         
-        function set.VolumeIllumination(obj, val)
+        function set.VolumeIllumination(this, val)
             if (isa(val,'Volume'))
-                obj.VolumeIllumination = val;
+                this.VolumeIllumination = val;
             else
                 error('VolumeEmission must be of type Volume');
             end
         end
         
-        function set.VolumeEmission(obj, val)
+        function set.VolumeEmission(this, val)
             if (isa(val,'Volume'))
-                obj.VolumeEmission = val;
+                this.VolumeEmission = val;
             else
                 error('VolumeEmission must be of type Volume');
             end
         end
         
-        function set.VolumeReflection(obj, val)
+        function set.VolumeReflection(this, val)
             if (isa(val,'Volume'))
-                obj.VolumeReflection = val;
+                this.VolumeReflection = val;
             else
                 error('VolumeReflection must be of type Volume');
             end
         end
         
-        function set.VolumeGradientX(obj, val)
+        function set.VolumeGradientX(this, val)
             if (isa(val,'Volume'))
-                obj.VolumeGradientX = val;
+                this.VolumeGradientX = val;
             else
                 error('VolumeReflection must be of type Volume');
             end
         end
-        function set.VolumeGradientY(obj, val)
+        function set.VolumeGradientY(this, val)
             if (isa(val,'Volume'))
-                obj.VolumeGradientY = val;
+                this.VolumeGradientY = val;
             else
                 error('VolumeReflection must be of type Volume');
             end
         end
-        function set.VolumeGradientZ(obj, val)
+        function set.VolumeGradientZ(this, val)
             if (is(val,'Volume'))
-                obj.VolumeGradientZ = val;
+                this.VolumeGradientZ = val;
             else
                 error('VolumeReflection must be of type Volume');
             end
         end
         
-        function set.VolumeAbsorption(obj, val)
+        function set.VolumeAbsorption(this, val)
             if (isa(val,'Volume'))
                 minVal = min(min(min(val.Data)));
                 if minVal < 0
                     warning('VolumeAbsorption is not allowed to contain data smaller than 0!');
                 end
-                obj.VolumeAbsorption = val;
+                this.VolumeAbsorption = val;
             else
                 error('VolumeAbsorption must be of type Volume');
             end
         end
         
-        function set.FocalLength(obj, val)
+        function set.FocalLength(this, val)
             if (isequal(size(val), [1,1]))
-                obj.FocalLength = val;
+                this.FocalLength = val;
             else
                 error('dimensions of ImageResolution must be a scalar');
             end
         end
         
-        function set.DistanceToObject(obj, val)
+        function set.DistanceToObject(this, val)
             if (isequal(size(val), [1,1]))
-                obj.DistanceToObject = val;
+                this.DistanceToObject = val;
             else
                 error('dimensions of ImageResolution must be a scalar');
             end
         end
         
-        function set.OpacityThreshold(obj, val)
+        function set.OpacityThreshold(this, val)
             if (isequal(size(val), [1,1]))
-                obj.OpacityThreshold = val;
+                this.OpacityThreshold = val;
             else
                 error('dimensions of ImageResolution must be a scalar');
             end
         end
         
-        function set.CameraXOffset(obj, val)
+        function set.CameraXOffset(this, val)
             if (isequal(size(val), [1,1]))
-                obj.CameraXOffset = val;
+                this.CameraXOffset = val;
             else
                 error('dimensions of ImageResolution must be a scalar');
             end
         end
         
-        function set.StereoOutput(obj, val)
+        function set.StereoOutput(this, val)
             if (strcmp(val,'red-cyan'))
-                obj.StereoOutput = val;
+                this.StereoOutput = val;
             elseif (strcmp(val,'left-right-horizontal'))
-                obj.StereoOutput = val;
+                this.StereoOutput = val;
             else
                 error('allowed values are "red-cyan", "left-right-horizontal"');
             end
         end
         
-        function set.RotationMatrix(obj, val)
+        function set.RotationMatrix(this, val)
             if (isequal(size(val), [3,3]))
-                    obj.RotationMatrix = val;
+                    this.RotationMatrix = val;
             else
                 error('dimensions of RotationMatrix must be [3,3]');
             end
         end
         
-        function set.ImageResolution(obj, val)
+        function set.ImageResolution(this, val)
             if (isequal(size(val), [1,2]))
-                obj.ImageResolution = val;
+                this.ImageResolution = val;
             else
                 error('dimensions of ImageResolution must be a [1,2]');
             end
         end
         
-        function set.ScaleEmission(obj, val)
+        function set.ScaleEmission(this, val)
              if (isequal(size(val), [1,1]))
-                 obj.ScaleEmission = val;
+                 this.ScaleEmission = val;
              else
                  error('dimensions of ImageResolution must be a scalar');
              end
         end
          
-        function set.ScaleReflection(obj, val)
+        function set.ScaleReflection(this, val)
              if (isequal(size(val), [1,1]))
-                 obj.ScaleReflection = val;
+                 this.ScaleReflection = val;
              else
                  error('dimensions of ImageResolution must be a scalar');
              end
         end
          
-        function set.ScaleAbsorption(obj, val)
+        function set.ScaleAbsorption(this, val)
              if (isequal(size(val), [1,1]))
-                 obj.ScaleAbsorption = val;
+                 this.ScaleAbsorption = val;
              else
                  error('dimensions of ImageResolution must be a scalar');
              end
@@ -274,18 +278,18 @@ classdef VolumeRender < handle
     end % methods
 
     methods(Access = protected)
-       function image = prender(obj, CameraXOffset, resolution)
+       function image = prender(this, CameraXOffset, resolution)
             % rendering image on GPU
             % CameraXOffset     offset between 2 cameras
             % resolution        image resolution
             % image             rendered image
 
             % check if all volumes are correctly set
-            validate=[islogical(obj.VolumeReflection), ...
-                      islogical(obj.VolumeAbsorption), ...
-                      islogical(obj.VolumeEmission)];
+            validate=[islogical(this.VolumeReflection), ...
+                      islogical(this.VolumeAbsorption), ...
+                      islogical(this.VolumeEmission)];
                   
-            if (islogical(obj.VolumeIllumination))
+            if (islogical(this.VolumeIllumination))
                 warning('VolumeIllumination is unset. Thus no lightning will be applied!');
             end
                 
@@ -294,34 +298,38 @@ classdef VolumeRender < handle
                 error('Not all volumes are properly set!');
             end
                   
-            scales=[obj.ScaleEmission, obj.ScaleReflection, obj.ScaleAbsorption];
-            props=[CameraXOffset, obj.FocalLength, obj.DistanceToObject];
+            scales=[this.ScaleEmission, this.ScaleReflection, this.ScaleAbsorption];
+            props=[CameraXOffset, this.FocalLength, this.DistanceToObject];
 
-            validate =  [islogical(obj.VolumeGradientX), ...
-                         islogical(obj.VolumeGradientY), ...
-                         islogical(obj.VolumeGradientZ)];
+            validate =  [islogical(this.VolumeGradientX), ...
+                         islogical(this.VolumeGradientY), ...
+                         islogical(this.VolumeGradientZ)];
 
-            matrix=flip(obj.RotationMatrix);
+            matrix=flip(this.RotationMatrix);
 
             if (all(not(validate)))
-                image = volumeRender(obj.LightSources, single(obj.VolumeEmission.Data), ...
-                               single(obj.VolumeReflection.Data), ...
-                               single(obj.VolumeAbsorption.Data), ...
-                               single(obj.VolumeIllumination.Data), single(scales), ...
-                               single(obj.ElementSizeUm), uint64(resolution), ...
+                image = volumeRender('render', this.objectHandle, ...
+                               this.LightSources, ...
+                               single(this.VolumeEmission.Data), ...
+                               single(this.VolumeReflection.Data), ...
+                               single(this.VolumeAbsorption.Data), ...
+                               single(this.VolumeIllumination.Data), single(scales), ...
+                               single(this.ElementSizeUm), uint64(resolution), ...
                                single(matrix), single(props), ...
-                               single(obj.OpacityThreshold), single(obj.Color), ...
-                               single(obj.VolumeGradientX.Data), ...
-                               single(obj.VolumeGradientY.Data), ...
-                               single(obj.VolumeGradientZ.Data));
+                               single(this.OpacityThreshold), single(this.Color), ...
+                               single(this.VolumeGradientX.Data), ...
+                               single(this.VolumeGradientY.Data), ...
+                               single(this.VolumeGradientZ.Data));
             else
-                image = volumeRender(obj.LightSources, single(obj.VolumeEmission.Data), ...
-                               single(obj.VolumeReflection.Data), ...
-                               single(obj.VolumeAbsorption.Data), ...
-                               single(obj.VolumeIllumination.Data), single(scales), ...
-                               single(obj.ElementSizeUm), uint64(resolution), ...
+                image = volumeRender('render', this.objectHandle, ...
+                               this.LightSources, ...
+                               single(this.VolumeEmission.Data), ...
+                               single(this.VolumeReflection.Data), ...
+                               single(this.VolumeAbsorption.Data), ...
+                               single(this.VolumeIllumination.Data), single(scales), ...
+                               single(this.ElementSizeUm), uint64(resolution), ...
                                single(matrix), single(props), ...
-                               single(obj.OpacityThreshold), single(obj.Color));
+                               single(this.OpacityThreshold), single(this.Color));
             end
        end
     end

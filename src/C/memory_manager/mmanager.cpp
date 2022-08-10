@@ -6,12 +6,14 @@
 class MManager
 {
 public:
-    MManager() { this->_test="constructed\n"; }
-    ~MManager() { mexPrintf("Calling destructor\n"); }
-    void train() { mexPrintf("Calling train\n"); };
-    void test() { mexPrintf(this->_test.c_str()); };
+    MManager() { this->_counter=0; }
+    ~MManager() { mexPrintf("Calling destructor\ncounter=%d\n", this->_counter); }
+    void inc() { this->_counter++; };
+    void dec() { this->_counter--; };
+    void set(const int value) { this->_counter = value; };
+    void print() { mexPrintf("current value: %d\n", this->_counter); }
 private:
-    std::string _test;
+    unsigned int _counter;
 };
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
@@ -49,22 +51,50 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     MManager* mmanager_instance = convertMat2Ptr<MManager>(prhs[1]);
     
     // Call the various class methods
-    // Train    
-    if (!strcmp("train", cmd)) {
+    // dec
+    if (!strcmp("dec", cmd)) {
         // Check parameters
         if (nlhs < 0 || nrhs < 2)
-            mexErrMsgTxt("Train: Unexpected arguments.");
+            mexErrMsgTxt("dec: Unexpected arguments.");
         // Call the method
-        mmanager_instance->train();
+        mmanager_instance->dec();
         return;
     }
-    // Test    
-    if (!strcmp("test", cmd)) {
+    // inc
+    if (!strcmp("inc", cmd)) {
         // Check parameters
         if (nlhs < 0 || nrhs < 2)
-            mexErrMsgTxt("Test: Unexpected arguments.");
+            mexErrMsgTxt("inc: Unexpected arguments.");
         // Call the method
-        mmanager_instance->test();
+        mmanager_instance->inc();
+        return;
+    }
+    // print
+    if (!strcmp("print", cmd)) {
+        // Check parameters
+        if (nlhs < 0 || nrhs < 2)
+            mexErrMsgTxt("print: Unexpected arguments.");
+        // Call the method
+        mmanager_instance->print();
+        return;
+    }
+
+    if (!strcmp("set", cmd)) {
+        // Check parameters
+        if (nlhs < 0 || nrhs < 3)
+            mexErrMsgTxt("dec: Unexpected arguments.");
+        // Call the method
+        mmanager_instance->set((unsigned int)mxGetScalar(prhs[2]));
+        return;
+    }
+
+    if (!strcmp("getAddress", cmd)) {
+        mexPrintf("%d", nrhs);
+        // Check parameters
+        if (nlhs < 0 || nrhs < 3)
+            mexErrMsgTxt("getAdress: Unexpected arguments.");
+        // Call the method
+        mexPrintf("memory: %d", prhs[2]);
         return;
     }
     

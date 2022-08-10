@@ -9,13 +9,13 @@ if ~isequal(fileparts(which('mmanager')), dir)
     mex mmanager.cpp
 end
 
-% Use the example interface
-% This is the interface written specifically for the example class
-fprintf('Using the mmanager interface\n');
-obj = mmanager_interface();
-train(obj);
-test(obj);
-clear obj % Clear calls the delete method
+% % Use the example interface
+% % This is the interface written specifically for the example class
+% fprintf('Using the mmanager interface\n');
+% obj = mmanager_interface();
+% train(obj);
+% test(obj);
+% clear obj % Clear calls the delete method
 
 % Use the standard interface
 % This interface can be used for any mex interface function using the
@@ -27,7 +27,22 @@ clear obj % Clear calls the delete method
 % class for each mex file.
 fprintf('Using the standard interface\n');
 obj = mex_interface(str2fun([dir '/mmanager'])); % str2fun allows us to use the full path, so the mex need not be on our path
-obj.train();
-obj.test();
+obj.inc();
+obj.inc();
+obj.inc();
+obj.inc();
+obj.print();
+
+obj.getAddress();
+
+obj.dec();
+obj.dec();
+obj.dec();
+obj.print();
+obj.set(uint64(35));
+obj.print();
+
+obj.getAdress();
+
 clear obj % Clear calls the delete method
 end

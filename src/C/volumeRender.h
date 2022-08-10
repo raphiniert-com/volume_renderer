@@ -21,10 +21,10 @@
  */
 namespace vr {
 
-/*! \var typedef float VolumeType
+/*! \var typedef float VolumeDataType
  * 	\brief Type of the volume data
  */
-typedef float VolumeType;
+typedef float VolumeDataType;
 
 /*! \struct float4x3 volumeRender.h
  * 	\brief struct of a 4x3 matrix, 4 rows, 3 cols

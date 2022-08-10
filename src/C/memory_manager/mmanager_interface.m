@@ -14,14 +14,29 @@ classdef mmanager_interface < handle
             mmanager('delete', this.objectHandle);
         end
 
-        %% Train - an example class method call
-        function varargout = train(this, varargin)
-            [varargout{1:nargout}] = mmanager('train', this.objectHandle, varargin{:});
+        %% inc - an example class method call
+        function varargout = inc(this, varargin)
+            [varargout{1:nargout}] = mmanager('inc', this.objectHandle, varargin{:});
         end
 
-        %% Test - another example class method call
-        function varargout = test(this, varargin)
-            [varargout{1:nargout}] = mmanager('test', this.objectHandle, varargin{:});
+        %% dec - another example class method call
+        function varargout = dec(this, varargin)
+            [varargout{1:nargout}] = mmanager('dec', this.objectHandle, varargin{:});
+        end
+
+        %% print - another example class method call
+        function varargout = print(this, varargin)
+            [varargout{1:nargout}] = mmanager('print', this.objectHandle, varargin{:});
+        end
+
+        %% set - another example class method call
+        function varargout = set(this, value, varargin)
+            [varargout{1:nargout}] = mmanager('set', this.objectHandle, value, varargin{:});
+        end
+
+        %% set - another example class method call
+        function varargout = getAddress(this, varargin)
+            [varargout{1:nargout}] = mmanager('getAddress', this.objectHandle, this, varargin{:});
         end
     end
 end
