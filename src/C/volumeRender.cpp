@@ -152,7 +152,7 @@ initRender(const size_t aWidth, const size_t aHeight, const float aScaleEmission
   return result;
 }
 
-/*! \fn Volume make_volume(float *data, cudaExtent& size)
+/*! \fn void cutGetMaxGflopsDeviceId()
  * 	\brief get the most powerful GPU using CUDA Runtime API Version
  *  taken from https://docs.nvidia.com/cuda/optimus-developer-guide/index.html
  *  \return device id
