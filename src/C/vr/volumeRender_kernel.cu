@@ -15,7 +15,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <vector>
-#include <volumeRender.h>
+#include <vr/volumeRender.h>
 
 #define ONE_OVER_2PI ((float)0.1591549430918953357688837633725143620344596457404564)
 #define PI2 ((float)6.2831853071795864769252867665590057683943387987502116)
@@ -36,13 +36,6 @@ typedef unsigned char uchar;
  */
 typedef float3 (*gradientFunction)(const float3, const float3, const float3,
                                    const float3, const float3, const float3);
-/*! \enum gradientMethod
- * 	\brief possible gradient computation methods
- */
-enum gradientMethod {
-  gradientCompute = 0, /*!< gradient computation on the fly */
-  gradientLookup = 1   /*!< use LUT to estimate gradient */
-};
 
 // forward declaration
 __device__ float3 computeGradient(const float3, const float3, const float3,
@@ -60,8 +53,7 @@ __device__ gradientFunction gradient_functions[2] = {computeGradient,
 /*! \var __device__ __constant__ gradientMethod dc_activeGradientMethod
  * 	\brief current chosen gradient Method. Default value is gradientCompute.
  */
-__device__ __constant__ gradientMethod dc_activeGradientMethod =
-    gradientCompute;
+__device__ __constant__ vr::gradientMethod dc_activeGradientMethod = vr::gradientCompute;
 
 /*! \var vr::LightSource *d_lightSources
  * 	\brief device array of lightsources
@@ -493,15 +485,10 @@ __global__ void d_render(float *d_aOutput, const vr::RenderOptions aOptions,
   // write in image structure
   uint size = aOptions.image_width * aOptions.image_height;
 
-// linear matlab conform memory layout (column-major)
-// descibed on:
-// https://eli.thegreenplace.net/2015/memory-layout-of-multi-dimensional-arrays/
-#ifdef MATLAB_MEX_FILE
+  // linear matlab conform memory layout (column-major)
+  // descibed on:
+  // https://eli.thegreenplace.net/2015/memory-layout-of-multi-dimensional-arrays/
   uint k = x * aOptions.image_height + y;
-#else
-  // row-major
-  uint k = y * aOptions.image_width + x;
-#endif
 
   // write output in RBG
   d_aOutput[k] = sum.x;
@@ -532,8 +519,8 @@ cudaArray *createTextureFromVolume(
   // copy data to 3D d_array
   cudaMemcpy3DParms copyParams = {0};
   copyParams.srcPtr = make_cudaPitchedPtr(
-      aVolume.data, aVolume.extent.width * sizeof(VolumeDataType),
-      aVolume.extent.width, aVolume.extent.height);
+    aVolume.data, aVolume.extent.width * sizeof(VolumeDataType),
+    aVolume.extent.width, aVolume.extent.height);
   copyParams.dstArray = d_aArray;
   copyParams.extent = aVolume.extent;
   copyParams.kind = cudaMemcpyHostToDevice;
@@ -597,9 +584,9 @@ void setGradientTextures(const Volume &aDx, const Volume &aDy,
   createTextureFromVolume(tex_gradientZ, aDz, d_gradientZArray);
 
   // assign gradient_function
-  gradientMethod tmp = gradientLookup;
+  vr::gradientMethod tmp = gradientLookup;
   HANDLE_ERROR(cudaMemcpyToSymbol(dc_activeGradientMethod, &tmp,
-                                  sizeof(enum gradientMethod)));
+                                  sizeof(enum vr::gradientMethod)));
 }
 
 /*! \fn void initCuda(const Volume& aVolumeEmission,
@@ -665,19 +652,10 @@ void initCuda(const Volume &aVolumeEmission, const Volume &aVolumeAbsorption,
   return;
 }
 
-/*! \fn void freeCudaBuffers()
- *  \brief frees all device memory
+/*! \fn void freeCudaBuffersGradients()
+ *  \brief removes the gradients from the device memory
  */
-void freeCudaBuffers() {
-  HANDLE_ERROR(cudaFreeArray(d_emissionArray));
-  HANDLE_ERROR(cudaFreeArray(d_absorptionArray));
-  HANDLE_ERROR(cudaFreeArray(d_reflectionArray));
-
-  if (d_lightSources != NULL) {
-    HANDLE_ERROR(cudaFree(d_lightSources));
-    HANDLE_ERROR(cudaFreeArray(d_illuminationArray));
-  }
-
+void freeCudaGradientBuffers() {
   // get value of dc_activeGradientMethod from device to host
   gradientMethod h_activeGradientMethod;
   cudaMemcpyFromSymbol(&h_activeGradientMethod, dc_activeGradientMethod,
@@ -723,6 +701,59 @@ void copyLightSources(const LightSource *aLightSources,
   HANDLE_ERROR(cudaMemcpyToSymbol(c_numLightSources, &aNumOfLightSources,
                                   sizeof(size_t)));
 }
+// set gradientMethod
+void setGradientMethod(const vr::gradientMethod aMethod) {
+  HANDLE_ERROR(
+    cudaMemcpyToSymbol(dc_activeGradientMethod, &aMethod, sizeof(enum vr::gradientMethod))
+  );
+}
 
+void syncWithDevice(const Volume &aVolumeEmission, const Volume &aVolumeAbsorption,
+                    const Volume &aVolumeReflection, const uint64_t &timeLastMemSync) {
+
+
+//   cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<VolumeDataType>();
+
+//   // if some stuff changed, copy new ressources to GPU and reset it beforehand
+//   if (aVolumeEmission.last_update >= timeLastMemSync) {
+//     HANDLE_ERROR(cudaUnbindTexture(tex_emission));
+//     HANDLE_ERROR(cudaFreeArray(d_emissionArray));
+    
+//     cudaArray *d_tmpEmissionArray = setEmissionTexture(const Volume &aVolumeEmission);
+//   }
+
+//   if (aVolumeEmission == aVolumeAbsorption) {
+// #ifdef DEBUG
+//     printf("Emission = Absorption\n");
+// #endif
+
+//     HANDLE_ERROR(cudaBindTextureToArray(tex_absorption, d_tmpEmissionArray,
+//                                         channelDesc));
+//   } else {
+//     cudaArray *d_tmpAbsorptionArray = setAbsorptionTexture(aVolumeAbsorption);
+//     if (aVolumeAbsorption == aVolumeReflection) {
+// #ifdef DEBUG
+//       printf("Absorption = Reflection\n");
+// #endif
+//       HANDLE_ERROR(cudaBindTextureToArray(tex_reflection, d_tmpAbsorptionArray,
+//                                           channelDesc));
+//     } else {
+//       if (aVolumeEmission == aVolumeReflection) {
+// #ifdef DEBUG
+//         printf("Emission = Reflection\n");
+// #endif
+//         HANDLE_ERROR(cudaBindTextureToArray(tex_reflection, d_tmpEmissionArray,
+//                                             channelDesc));
+//       } else {
+// #ifdef DEBUG
+//         printf("All Volumes are unique\n");
+// #endif
+//         setReflectionTexture(aVolumeReflection);
+//       }
+//     }
+
+//     // no further check is necessary
+//     return;
+  };
 } // namespace vr
 #endif // #ifndef _VOLUMERENDER_KERNEL_CU_

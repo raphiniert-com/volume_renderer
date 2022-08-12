@@ -10,50 +10,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <stddef.h>
-#include <memory_manager/mmanager.hxx>
+#include <vr/mm/mmanager.hxx>
 
-#include <common.h>
 #include <cuda_runtime.h>
 #include <cuda_runtime_api.h>
 #include <mex.h>
-#include <volumeRender.h>
+#include <vr/volumeRender.h>
 
 using namespace vr;
-
-/*! \fn Volume make_volume(const mxArray* prhs)
- * 	\brief constructing a Volume structure
- *  \param prhs pointer to the matlab volume
- *  \return structure of type Volume
- */
-Volume make_volume(const mxArray *prhs) {
-  const mxArray *arrData = prhs;
-  const size_t *dimArray = mxGetDimensions(arrData);
-
-  float *data = (float *)mxGetPr(arrData);
-
-  size_t depth(1);
-
-#ifdef DEBUG
-  mexPrintf("Volume:\n\t#dimensions: %d\n", mxGetNumberOfDimensions(arrData));
-#endif
-
-  // since mxGetNumberOfDimensions allways returns 2 or greater this works
-  if (mxGetNumberOfDimensions(arrData) == 3)
-    depth = dimArray[2];
-
-#ifdef DEBUG
-  if (mxGetNumberOfDimensions(arrData) > 2)
-    mexPrintf("\tresolution: %dx%dx%d\n", dimArray[0], dimArray[1],
-              dimArray[2]);
-  else
-    mexPrintf("\tresolution: %dx%d\n", dimArray[0], dimArray[1]);
-#endif
-
-  cudaExtent extent =
-      make_cudaExtent(dimArray[0], dimArray[1], depth);
-
-  return make_volume((float *)data, extent);
-}
 
 /*! \fn float3 make_float3(float * aPointer)
  * 	\brief constructing a float3 structure [x,y,z]
@@ -141,7 +105,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     if (nlhs != 1)
         mexErrMsgTxt("New: One output expected.");
     // Return a handle to a new C++ instance
-    plhs[0] = convertPtr2Mat<MManager>(new MManager);
+    plhs[0] = convertPtr2Mat<mm::MManager>(new mm::MManager);
     return;
   }
 
@@ -152,7 +116,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   // Delete
   if (!strcmp("delete", cmd)) {
       // Destroy the C++ object
-      destroyObject<MManager>(prhs[1]);
+      destroyObject<mm::MManager>(prhs[1]);
       // Warn if other commands were ignored
       if (nlhs != 0 || nrhs != 2)
           mexWarnMsgTxt("Delete: Unexpected arguments ignored.");
@@ -160,7 +124,43 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   }
 
   // Get the class instance pointer from the second input
-  MManager* mmanager_instance = convertMat2Ptr<MManager>(prhs[1]);
+  mm::MManager* mmanager_instance = convertMat2Ptr<mm::MManager>(prhs[1]);
+
+  // mem_info
+  if (!strcmp("mem_info", cmd)) {
+    mexPrintf(mmanager_instance->memInfo().c_str());
+  }
+
+  // sync_volumes
+  if (!strcmp("sync_volumes", cmd)) {
+    mmanager_instance->timeLastMemSync = ((uint64_t*) prhs[2])[0];
+
+    mmanager_instance->volumeEmission = mxMake_volume(prhs[3]);
+    mmanager_instance->volumeReflection = mxMake_volume(prhs[4]);
+    mmanager_instance->volumeAbsorption = mxMake_volume(prhs[5]);
+
+    // assign gradient_function
+    vr::gradientMethod tmp = gradientCompute;
+
+    // gradient volume is given
+    if (nrhs == 9) {
+      mmanager_instance->volumeDx = mxMake_volume(prhs[6]);
+      mmanager_instance->volumeDy = mxMake_volume(prhs[7]);
+      mmanager_instance->volumeDz = mxMake_volume(prhs[8]);
+
+      tmp = gradientLookup;
+    } else if(nrhs == 6) {
+      mmanager_instance->resetGradients();
+    }
+
+    setGradientMethod(tmp);
+
+    // Warn if other commands were ignored
+    if (nlhs != 0 || nrhs > 9)
+        mexWarnMsgTxt("SyncVolumes: Unexpected arguments ignored.");
+
+    return;
+  }
 
   // ------
   // render
@@ -183,7 +183,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
           mxIsClass(mxVolumeLight, "logical"))) {
       // get size num lights
       const size_t numLightSources = mxGetN(mxLightSources);
-      const Volume volumeLight = make_volume(mxVolumeLight);
+      const Volume volumeLight = mxMake_volume(mxVolumeLight);
 
   #ifdef DEBUG
       mexPrintf("Setting up %d Lightsources\n", numLightSources);
@@ -216,15 +216,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       setIlluminationTexture(volumeLight);
 
       // compute needed RAM
-      requiredRAM += (volumeLight.extent.width * volumeLight.extent.depth *
-                        volumeLight.extent.height * sizeof(VolumeDataType) +
-                        numLightSources * sizeof(LightSource));
+      requiredRAM += volumeLight.memory_size + 
+                        (numLightSources * sizeof(LightSource));
     }
 
     // reading all volume data from the matlab class Volume
-    Volume volumeEmission = make_volume(prhs[3]);
-    const Volume volumeReflection = make_volume(prhs[4]);
-    const Volume volumeAbsorption = make_volume(prhs[5]);
+    Volume volumeEmission = mxMake_volume(prhs[3]);
+    const Volume volumeReflection = mxMake_volume(prhs[4]);
+    const Volume volumeAbsorption = mxMake_volume(prhs[5]);
 
     // 0: emission
     // 1: reflection
@@ -280,44 +279,34 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     
     // compute required ram
     // emission is required in anycase
-    requiredRAM += volumeEmission.extent.width * volumeEmission.extent.depth *
-                volumeEmission.extent.height * sizeof(VolumeDataType);
+    requiredRAM += volumeEmission.memory_size;
 
     // check if absorption is unique
     if (volumeEmission != volumeAbsorption &&
         volumeReflection != volumeAbsorption) {
-      requiredRAM += volumeAbsorption.extent.width * volumeAbsorption.extent.depth *
-                  volumeAbsorption.extent.height * sizeof(VolumeDataType);
+      requiredRAM += volumeAbsorption.memory_size;
     }
 
     // check if reflection is unique
     if (volumeEmission != volumeReflection &&
         volumeReflection != volumeAbsorption) {
-      requiredRAM += volumeReflection.extent.width * volumeReflection.extent.depth *
-                  volumeReflection.extent.height * sizeof(VolumeDataType);
+      requiredRAM += volumeReflection.memory_size;
     }
 
     // if gradients are passed through
-    if (nrhs == MIN_ARGS + 3) {
-      Volume dx = make_volume(prhs[MIN_ARGS]);
-      Volume dy = make_volume(prhs[MIN_ARGS + 1]);
-      Volume dz = make_volume(prhs[MIN_ARGS + 2]);
+    // if (nrhs == MIN_ARGS + 3) {
+    //   Volume dx = mxMake_volume(prhs[MIN_ARGS]);
+    //   Volume dy = mxMake_volume(prhs[MIN_ARGS + 1]);
+    //   Volume dz = mxMake_volume(prhs[MIN_ARGS + 2]);
 
-      setGradientTextures(dx, dy, dz);
+    //   setGradientTextures(dx, dy, dz);
 
-      requiredRAM += (dx.extent.width * dx.extent.depth * dx.extent.height *
-                        sizeof(VolumeDataType) +
-
-                    dy.extent.width * dy.extent.depth * dy.extent.height *
-                        sizeof(VolumeDataType) +
-
-                    dz.extent.width * dz.extent.depth * dz.extent.height *
-                        sizeof(VolumeDataType));
-    }
+    //   requiredRAM += dx.memory_size + dy.memory_size + dz.memory_size;
+    // }
 
     // check if there is enough free VRam
     // if not program will stop with an error msg
-    checkFreeDeviceMemory(requiredRAM);
+    // checkFreeDeviceMemory(requiredRAM);
 
     // switch
     mwSize dim[3] = {imageResolution[0], imageResolution[1], 3};

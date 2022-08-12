@@ -1,41 +1,84 @@
 classdef VolumeRender < handle
     % For explanation see documentation (pdf)
     properties
-        FocalLength=0.0;            % 
-        DistanceToObject=0.0;       % 
-        OpacityThreshold=0.95;      % 
+        FocalLength(1,1)      = 0.0;
+        DistanceToObject(1,1) = 0.0;
+        OpacityThreshold(1,1) = 0.95;
         
-        ElementSizeUm=[1,1,1];      % 
+        LightSources(1,:)     = false;
         
-        LightSources=false;         % 
-        
-        Color=[1,1,1];              % 
-        
-        VolumeEmission=false;       % 
-        VolumeReflection=Volume(1); % 
-        VolumeAbsorption=false;     % 
-        VolumeGradientX=false;      % 
-        VolumeGradientY=false;      % 
-        VolumeGradientZ=false;      % 
-        VolumeIllumination=false;   % 
+        Color(1,3)            = [1,1,1];
  
-        ScaleEmission=1.0;          % 
-        ScaleReflection=1.0;        % 
-        ScaleAbsorption=1.0;        % 
+        ScaleEmission(1,1)    = 1.0;
+        ScaleReflection(1,1)  = 1.0;
+        ScaleAbsorption(1,1)  = 1.0;
         
-        CameraXOffset=0;
-        StereoOutput=StereoRenderMode.RedCyan;
+        CameraXOffset(1,1)    = 0;
+        StereoOutput StereoRenderMode = StereoRenderMode.RedCyan;
         
-        RotationMatrix = eye(3);   % 
-        ImageResolution = [0,0];   % 
+        ElementSizeUm(1,3)    = [1,1,1];
+        RotationMatrix(3,3)   = eye(3);
+        ImageResolution(1,2)  = [0,0];
+        
+        VolumeReflection      = Volume(1);
+        
+        VolumeEmission        = false;
+        VolumeAbsorption      = false;
+        VolumeGradientX       = false;
+        VolumeGradientY       = false;
+        VolumeGradientZ       = false;
+        VolumeIllumination    = false;
+
+        TimeLastMemSync = uint64(0);
     end
+
     properties (SetAccess = private, Hidden = true)
         objectHandle; % Handle to the underlying C++ memory manager instance
+        
     end
     methods        
-        % construct
+        % Constructor
         function this = VolumeRender(varargin)
             this.objectHandle = volumeRender('new', varargin{:});
+        end
+
+        % Destructor
+        function delete(this)
+            volumeRender('delete', this.objectHandle);
+        end
+
+        function syncVolumes(this)
+            validate =  [islogical(this.VolumeGradientX), ...
+                         islogical(this.VolumeGradientY), ...
+                         islogical(this.VolumeGradientZ)];
+
+            if (all(not(validate)))
+                volumeRender(  'sync_volumes', this.objectHandle, ...
+                               this.TimeLastMemSync, ...
+                               this.VolumeEmission, ...
+                               this.VolumeReflection, ...
+                               this.VolumeAbsorption, ...
+                               this.VolumeGradientX, ...
+                               this.VolumeGradientY, ...
+                               this.VolumeGradientZ);
+            else
+                volumeRender(  'sync_volumes', this.objectHandle, ...
+                               this.TimeLastMemSync, ...
+                               this.VolumeEmission, ...
+                               this.VolumeReflection, ...
+                               this.VolumeAbsorption);
+            end
+
+            % save time of render process
+            this.TimeLastMemSync=timestamp;
+        end
+
+        function memInfo(this)
+            volumeRender('mem_info', this.objectHandle);
+        end
+
+        function memClear(this)
+            volumeRender('delete', this.objectHandle);
         end
 
         function rotate(this, alpha, beta, gamma)
@@ -64,7 +107,7 @@ classdef VolumeRender < handle
             % image     output (3D) image
             
             if (this.CameraXOffset==0)
-                image=prender(this, single(this.CameraXOffset), flip(this.ImageResolution));
+                image=p_render(this, single(this.CameraXOffset), flip(this.ImageResolution));
             else
                 % render 3D (combine the images)
                 base = this.CameraXOffset/2;
@@ -78,8 +121,8 @@ classdef VolumeRender < handle
                 % render more pixel
                 resolution=flip(this.ImageResolution) + [0, delta];
                 
-                rightImage=prender(this, base, resolution);
-                leftImage=prender(this, -base, resolution);
+                rightImage=p_render(this, base, resolution);
+                leftImage=p_render(this, -base, resolution);
                 
                 % combine the 2 images, crop delta
                 rect=[(delta+1) 0 size(leftImage,2) size(leftImage,1)];
@@ -88,7 +131,7 @@ classdef VolumeRender < handle
                 rect=[0 0 (size(rightImage,2)-delta) size(rightImage,1)];
                 rightImage=imcrop(rightImage, rect);
                 
-                if( strcmp(this.StereoOutput,StereoRenderMode.RedCyan) )
+                if (strcmp(this.StereoOutput,StereoRenderMode.RedCyan))
                     % RGB - anaglyph
                     image=zeros([size(leftImage,1), size(leftImage,2), 3]);
                     image(:,:,1) = leftImage(:,:,1);
@@ -104,32 +147,9 @@ classdef VolumeRender < handle
        
     % set methods
     methods
-        function set.ElementSizeUm(this, val)
-            if (isequal(size(val), [1,3]))
-                this.ElementSizeUm = val;
-            elseif (isequal(size(val), [3,1]))
-                this.ElementSizeUm = val'; % transpose it
-            else
-                error('dimensions of ImageResolution must be [1,3]');
-            end
-        end
-        
-        function set.Color(this, val)
-            if (isequal(size(val), [1,3]))
-                this.Color = val;
-            else
-                error('dimensions of ImageResolution must be [1,3] and values between 0 and 1');
-            end
-        end
-        
         function set.LightSources(this, val)
-            % ensure correct dimension
-            validate = [size(val,1) == 1, ...
-                        ismatrix(val), ...
-                        ndims(val) == 2, ...
-                        isa(val, 'LightSource')
-                        ];
-            if (all(validate))
+            % ensure correct type
+            if (all(isa(val, 'LightSource')))
                 this.LightSources = val;
             else
                 error('LightSources must be a 1xN vector with data of type LightSource!');
@@ -194,38 +214,6 @@ classdef VolumeRender < handle
             end
         end
         
-        function set.FocalLength(this, val)
-            if (isequal(size(val), [1,1]))
-                this.FocalLength = val;
-            else
-                error('dimensions of ImageResolution must be a scalar');
-            end
-        end
-        
-        function set.DistanceToObject(this, val)
-            if (isequal(size(val), [1,1]))
-                this.DistanceToObject = val;
-            else
-                error('dimensions of ImageResolution must be a scalar');
-            end
-        end
-        
-        function set.OpacityThreshold(this, val)
-            if (isequal(size(val), [1,1]))
-                this.OpacityThreshold = val;
-            else
-                error('dimensions of ImageResolution must be a scalar');
-            end
-        end
-        
-        function set.CameraXOffset(this, val)
-            if (isequal(size(val), [1,1]))
-                this.CameraXOffset = val;
-            else
-                error('dimensions of ImageResolution must be a scalar');
-            end
-        end
-        
         function set.StereoOutput(this, val)
             if (strcmp(val,'red-cyan'))
                 this.StereoOutput = val;
@@ -235,50 +223,10 @@ classdef VolumeRender < handle
                 error('allowed values are "red-cyan", "left-right-horizontal"');
             end
         end
-        
-        function set.RotationMatrix(this, val)
-            if (isequal(size(val), [3,3]))
-                    this.RotationMatrix = val;
-            else
-                error('dimensions of RotationMatrix must be [3,3]');
-            end
-        end
-        
-        function set.ImageResolution(this, val)
-            if (isequal(size(val), [1,2]))
-                this.ImageResolution = val;
-            else
-                error('dimensions of ImageResolution must be a [1,2]');
-            end
-        end
-        
-        function set.ScaleEmission(this, val)
-             if (isequal(size(val), [1,1]))
-                 this.ScaleEmission = val;
-             else
-                 error('dimensions of ImageResolution must be a scalar');
-             end
-        end
-         
-        function set.ScaleReflection(this, val)
-             if (isequal(size(val), [1,1]))
-                 this.ScaleReflection = val;
-             else
-                 error('dimensions of ImageResolution must be a scalar');
-             end
-        end
-         
-        function set.ScaleAbsorption(this, val)
-             if (isequal(size(val), [1,1]))
-                 this.ScaleAbsorption = val;
-             else
-                 error('dimensions of ImageResolution must be a scalar');
-             end
-        end
     end % methods
 
     methods(Access = protected)
-       function image = prender(this, CameraXOffset, resolution)
+       function image = p_render(this, CameraXOffset, resolution)
             % rendering image on GPU
             % CameraXOffset     offset between 2 cameras
             % resolution        image resolution
@@ -310,23 +258,23 @@ classdef VolumeRender < handle
             if (all(not(validate)))
                 image = volumeRender('render', this.objectHandle, ...
                                this.LightSources, ...
-                               single(this.VolumeEmission.Data), ...
-                               single(this.VolumeReflection.Data), ...
-                               single(this.VolumeAbsorption.Data), ...
-                               single(this.VolumeIllumination.Data), single(scales), ...
+                               this.VolumeEmission, ...
+                               this.VolumeReflection, ...
+                               this.VolumeAbsorption, ...
+                               this.VolumeIllumination, single(scales), ...
                                single(this.ElementSizeUm), uint64(resolution), ...
                                single(matrix), single(props), ...
                                single(this.OpacityThreshold), single(this.Color), ...
-                               single(this.VolumeGradientX.Data), ...
-                               single(this.VolumeGradientY.Data), ...
-                               single(this.VolumeGradientZ.Data));
+                               this.VolumeGradientX, ...
+                               this.VolumeGradientY, ...
+                               this.VolumeGradientZ);
             else
                 image = volumeRender('render', this.objectHandle, ...
                                this.LightSources, ...
-                               single(this.VolumeEmission.Data), ...
-                               single(this.VolumeReflection.Data), ...
-                               single(this.VolumeAbsorption.Data), ...
-                               single(this.VolumeIllumination.Data), single(scales), ...
+                               this.VolumeEmission, ...
+                               this.VolumeReflection, ...
+                               this.VolumeAbsorption, ...
+                               this.VolumeIllumination, single(scales), ...
                                single(this.ElementSizeUm), uint64(resolution), ...
                                single(matrix), single(props), ...
                                single(this.OpacityThreshold), single(this.Color));

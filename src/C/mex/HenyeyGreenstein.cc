@@ -9,7 +9,7 @@
  *
  */
 
-#include <float3.h>
+#include <vr/illumination/float3.h>
 #include <math.h>
 #include <mex.h>
 #include <sstream>

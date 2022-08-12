@@ -14,10 +14,7 @@
 #include <cuda.h>
 #include <sstream>
 #include <stdio.h>
-
-#ifdef MATLAB_MEX_FILE
 #include <mex.h>
-#endif
 
 #ifdef DEBUG
 
@@ -35,12 +32,7 @@ static void HandleError(cudaError_t err, const char *file, int line) {
                  << line << "\n";
     std::string error = stringStream.str();
 
-#ifdef MATLAB_MEX_FILE
     mexErrMsgTxt(error.c_str());
-#else
-    printf(error.c_str());
-    exit(EXIT_SUCCESS);
-#endif
   }
 }
 #endif

@@ -8,7 +8,7 @@
  */
 
 #include <assert.h>
-#include <common.h>
+#include <vr/common.h>
 #include <cuda_runtime.h>
 #include <utility>
 #include <vector_types.h>
@@ -66,9 +66,11 @@ struct Volume {
   cudaExtent extent;
   /*! The memory size the volume uses */
   size_t memory_size;
+  /*! timestamp of last data change */
+  uint64_t last_update;
 };
 
-Volume make_volume(float *data, cudaExtent &extent);
+Volume make_volume(float *data, uint64_t last_update, cudaExtent &extent);
 
 bool operator==(const Volume &a, const Volume &b);
 bool operator!=(const Volume &a, const Volume &b);
@@ -121,8 +123,6 @@ float *render(const dim3 &block_size, const dim3 &grid_size,
 void initCuda(const Volume &aVolumeEmission, const Volume &aVolumeAbsorption,
               const Volume &aVolumeReflection);
 
-void freeCudaBuffers();
-
 void render_kernel(float *d_output, const dim3 &block_size,
                    const dim3 &grid_size, const RenderOptions &options,
                    const float3 &volume_color, const float3 &aGradientStep);
@@ -133,15 +133,27 @@ void setIlluminationTexture(const Volume &volume);
 
 void setGradientTextures(const Volume &dx, const Volume &dy, const Volume &dz);
 
-int iDivUp(int a, int b);
+size_t iDivUp(size_t a, size_t b);
 
 inline int cutGetMaxGflopsDeviceId();
 
-// for test
-#ifndef MATLAB_MEX_FILE
-Volume readVolumeFile(const char *filename, cudaExtent &dim, float3 &dim_mm);
-float *readRawFile(const char *filename);
-#endif
+Volume mxMake_volume(const mxArray *mxVolume);
+
+/*! \enum gradientMethod
+ * 	\brief possible gradient computation methods
+ */
+enum gradientMethod {
+  gradientCompute = 0, /*!< gradient computation on the fly */
+  gradientLookup = 1   /*!< use LUT to estimate gradient */
+};
+
+void freeCudaGradientBuffers();
+
+void setGradientMethod(const vr::gradientMethod aMethod);
+
+void syncWithDevice(const Volume &aVolumeEmission, const Volume &aVolumeAbsorption,
+                    const Volume &aVolumeReflection, const uint64_t timeLastMemSync);
+
 }; // namespace vr
 
 #endif // _VOLUMERENDER_H_

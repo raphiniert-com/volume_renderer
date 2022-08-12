@@ -41,5 +41,5 @@ _Volume Renderer for use with MATLAB®_ was originally developed as a student pr
 
 ---
 
-<a id="f1"></a>1: tested and developed under R2022a; might work from R2015b [↩](#a1)  
+<a id="f1"></a>1: tested and developed under R2022a; might work from R2018a [↩](#a1)  
 <a id="f2"></a>2: provided by Benjamin Ummenhofer, data from <a id="r1">[[1]](#ref1)</a> [↩](#a2)

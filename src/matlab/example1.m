@@ -1,9 +1,9 @@
 % This example uses two channels and two light-sources to render one static image
 
 % add VolumeRender to path
-addpath('VolumeRender');
+addpath('matlab/VolumeRender');
 
-path='../../h5-data/';
+path='../h5-data/';
 
 filename = [path '/ViBE-Z_72hpf_v1.h5']; 
 
@@ -43,6 +43,9 @@ render.ScaleReflection=0.4;
 
 render.Color = [1,1,0];
 
+render.syncVolumes();
+render.memInfo();
+
 rendered_image_structure = render.render();
 
 absorptionVolume=Volume(data_main);
@@ -57,4 +60,13 @@ render.Color = [1,1,1];
 
 rendered_image_main = render.render();
 
-imshow(rendered_image_main+rendered_image_structure);
+render.syncVolumes();
+
+render.memInfo();
+
+% figure;
+% imshow(rendered_image_main)
+% figure;
+% imshow(rendered_image_structure)
+% figure;
+% imshow(rendered_image_main+rendered_image_structure);

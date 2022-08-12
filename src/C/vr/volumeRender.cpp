@@ -12,7 +12,7 @@
 #include <helper_math.h>
 #include <iostream>
 #include <vector_functions.h>
-#include <volumeRender.h>
+#include <vr/volumeRender.h>
 
 namespace vr {
 
@@ -22,7 +22,9 @@ namespace vr {
  *  \param b another volume
  *  \return (b.data == b.data)
  */
-bool operator==(const Volume &a, const Volume &b) { return (a.data == b.data); }
+bool operator==(const Volume &a, const Volume &b) { 
+  return (a.data == b.data) && (a.last_update == b.last_update) && (a.memory_size == b.memory_size); 
+}
 
 /*! \fn bool operator!=( const Volume& a, const Volume& b )
  * 	\brief compares if the data pointer of two volumes are unequal
@@ -38,7 +40,7 @@ bool operator!=(const Volume &a, const Volume &b) { return !(a == b); }
  *  \param b divisor
  *  \return a/b rounded to nearest higher int
  */
-int iDivUp(int a, int b) { return (a % b != 0) ? (a / b + 1) : (a / b); }
+size_t iDivUp(size_t a, size_t b) { return (a % b != 0) ? (a / b + 1) : (a / b); }
 
 /*! \fn LightSource make_lightSource(float3 pos, float3 color)
  * 	\brief constructing a LightSource structure
@@ -53,15 +55,17 @@ LightSource make_lightSource(float3 pos, float3 color) {
   return result;
 }
 
-/*! \fn Volume make_volume(float *data, cudaExtent& size)
+/*! \fn Volume make_volume(float *data, uint64_t last_update, cudaExtent& size)
  * 	\brief constructing a Volume structure
  *  \param data raw data of the volume
+ *  \param last_update timestamp of last data change
  *  \param extent extent of the volume
  *  \return structure of type Volume
  */
-Volume make_volume(float *data, cudaExtent &extent) {
+Volume make_volume(float *data, uint64_t last_update, cudaExtent &extent) {
   Volume volume;
   volume.extent = extent;
+  volume.last_update = last_update;
   volume.data = data;
 
   volume.memory_size =
@@ -216,26 +220,23 @@ inline int cutGetMaxGflopsDeviceId() {
   return max_perf_device;
 }
 
-/*! \fn render(const dim3& block_size, const dim3& grid_size,
-               const RenderOptions& options, const Volume& volumeEmission,
-               const Volume& volumeAbsorption, const Volume& volumeReflection,
-               const float3& color)
+/*! \fn render(const dim3 &block_size, const dim3 &grid_size,
+               const RenderOptions &aOptions, const MManager *mmanagerInstance,
+               const float3 &aColor)
  * 	\brief computes some properties and selects device on that the render
  computes
  *  \param block_size CUDA block size
  * 	\param grid_size CUDA grid size
  *  \param aOptions Options of the rendering process
- *  \param aVolumeEmission emission volume
- *  \param aVolumeAbsorption absorption volume
- * 	\param aVolumeReflection reflection volume
+ *  \param mmanagerInstance Memory manager instance
  *  \param aColor the color the rendered volume absorbs
  *  \return pointer to the rendered 2D image
  */
 float *render(const dim3 &block_size, const dim3 &grid_size,
-              const RenderOptions &aOptions, const Volume &aVolumeEmission,
+              const RenderOptions &aOptions, const Volume &volumeEmission,
               const Volume &aVolumeAbsorption, const Volume &aVolumeReflection,
               const float3 &aColor) {
-  initCuda(aVolumeEmission, aVolumeAbsorption, aVolumeReflection);
+  // initCuda(aVolumeEmission, aVolumeAbsorption, aVolumeReflection);
 
 #ifdef DEBUG
   printf("rendering scene..\n");
@@ -273,13 +274,12 @@ float *render(const dim3 &block_size, const dim3 &grid_size,
   HANDLE_ERROR(cudaMalloc((void **)&d_output, size));
   HANDLE_ERROR(cudaMemset(d_output, 0, size));
 
-  const float3 gradientStep = make_float3(1.f / aVolumeEmission.extent.width,
-                                          1.f / aVolumeEmission.extent.height,
-                                          1.f / aVolumeEmission.extent.depth);
+  const float3 gradientStep = make_float3(1.f / volumeEmission.extent.width,
+                                          1.f / volumeEmission.extent.height,
+                                          1.f / volumeEmission.extent.depth);
 
   render_kernel(d_output, block_size, grid_size, aOptions, aColor,
                 gradientStep);
-  // cutilCheckMsg("Error: render_kernel() execution FAILED");
 
   HANDLE_ERROR(cudaDeviceSynchronize());
   HANDLE_ERROR(cudaMemcpy(readback, d_output, size, cudaMemcpyDeviceToHost));
@@ -295,10 +295,10 @@ float *render(const dim3 &block_size, const dim3 &grid_size,
 
   // free device memory
   cudaFree(d_output);
-  freeCudaBuffers();
+  // freeCudaBuffers();
   cudaDeviceSynchronize();
 
-  cudaDeviceReset();
+  // cudaDeviceReset();
 
 #ifdef DEBUG
   printf("finished rendering..\n");
@@ -307,34 +307,45 @@ float *render(const dim3 &block_size, const dim3 &grid_size,
   return readback;
 }
 
-// only for test, undocumented
-#ifndef MATLAB_MEX_FILE
-Volume readVolumeFile(const char *filename, cudaExtent &dim, float3 &dim_mm) {
-  Volume data = make_volume(readRawFile(filename), dim);
-  for (int i = 0; i < dim.width * dim.height * dim.depth; ++i) {
-    data.data[i] = fabsf(data.data[i]);
-  }
+/*! \fn Volume mxMake_volume(const mxArray* prhs)
+ * 	\brief constructing a Volume structure
+ *  \param prhs pointer to the matlab volume
+ *  \return structure of type Volume
+ */
+Volume mxMake_volume(const mxArray *mxVolume) {
+  // use mxGetPropertyShared in order to circumvent a deep copy
+  // it's a undocumented function, available since R2018a
+  mxArray *mxVolumeData = mxGetPropertyShared(mxVolume, 0, "Data");
+  uint64_t *mxVolumeTimeLastUpdate =
+      (uint64_t *)mxGetPr(mxGetProperty(mxVolume, 0, "TimeLastUpdate"));
 
-  return data;
-}
+  const size_t *dimArray = mxGetDimensions(mxVolumeData);
 
-float *readRawFile(const char *filename) {
-  FILE *fp = fopen(filename, "rb");
-  if (!fp) {
-    fprintf(stderr, "Error opening file '%s'\n", filename);
-    exit(EXIT_FAILURE);
-  }
+  uint64_t last_update = mxVolumeTimeLastUpdate[0];
 
-  // obtain file size:
-  fseek(fp, 0, SEEK_END);
-  long size = ftell(fp);
-  rewind(fp);
+  float *data = (float *)mxGetPr(mxVolumeData);
 
-  void *data = malloc(size);
-  size_t read = fread(data, 4, size, fp);
-  fclose(fp);
+  size_t depth(1);
 
-  return (float *)data;
-}
+#ifdef DEBUG
+  mexPrintf("Volume:\n\t#dimensions: %d\n", mxGetNumberOfDimensions(mxVolumeData));
 #endif
+
+  // since mxGetNumberOfDimensions allways returns 2 or greater this works
+  if (mxGetNumberOfDimensions(mxVolumeData) == 3)
+    depth = dimArray[2];
+
+#ifdef DEBUG
+  if (mxGetNumberOfDimensions(mxVolumeData) > 2)
+    mexPrintf("\tresolution: %dx%dx%d\n", dimArray[0], dimArray[1],
+              dimArray[2]);
+  else
+    mexPrintf("\tresolution: %dx%d\n", dimArray[0], dimArray[1]);
+#endif
+
+  cudaExtent extent =
+    make_cudaExtent(dimArray[0], dimArray[1], depth);
+
+  return make_volume((float *)data, last_update, extent);
+}
 } // namespace vr
