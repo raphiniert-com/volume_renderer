@@ -115,6 +115,9 @@ classdef VolumeRender < handle
             % rendering image. If CmaeraXOffset does not equal 0
             % a 3D anaglyph will be returned
             % image     output (3D) image
+
+            % sync images onto the device
+            this.syncVolumes()
             
             if (this.CameraXOffset==0)
                 image=p_render(this, single(this.CameraXOffset), flip(this.ImageResolution));
