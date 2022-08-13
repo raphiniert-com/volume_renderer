@@ -35,7 +35,20 @@ public:
     ~MManager() {
         cudaDeviceReset();
     }
-    
+
+    void sync() {
+        syncWithDevice(this->volumeEmission, this->volumeAbsorption, 
+            this->volumeReflection, this->timeLastMemSync);
+        mexPrintf("last sync: %u\n", this->timeLastMemSync);
+        
+        // initCuda(this->volumeEmission, this->volumeAbsorption, this->volumeReflection);
+
+        if (this->volumeDx.last_update != 0 && this->volumeDy.last_update != 0 && 
+            this->volumeDz.last_update != 0) {
+            setGradientTextures(this->volumeDx, this->volumeDy, this->volumeDz);
+        }
+    }
+
     void resetGradients() {
         freeCudaGradientBuffers();
 
@@ -95,6 +108,7 @@ public:
             << "\t\tAb\t" << similarityEmAb << "\t" << 1
             << "\n"
             << "\t\tRe\t" << similarityEmRe << "\t" << similarityAbRe << "\t" << 1
+            << "\n"
             << "\n";
 
         return os.str();

@@ -116,8 +116,7 @@ initRender(const size_t aWidth, const size_t aHeight, const float aScaleEmission
            const float aOpacityThreshold, const cudaExtent &aVolumeSize);
 
 float *render(const dim3 &block_size, const dim3 &grid_size,
-              const RenderOptions &aOptions, const Volume &aVolumeEmission,
-              const Volume &aVolumeAbsorption, const Volume &aVolumeReflection,
+              const RenderOptions &aOptions, const cudaExtent &aVolumeExtent,
               const float3 &aColor);
 
 void initCuda(const Volume &aVolumeEmission, const Volume &aVolumeAbsorption,
@@ -149,10 +148,10 @@ enum gradientMethod {
 
 void freeCudaGradientBuffers();
 
-void setGradientMethod(const vr::gradientMethod aMethod);
+void setGradientMethod(const gradientMethod aMethod);
 
 void syncWithDevice(const Volume &aVolumeEmission, const Volume &aVolumeAbsorption,
-                    const Volume &aVolumeReflection, const uint64_t timeLastMemSync);
+                    const Volume &aVolumeReflection, const uint64_t &timeLastMemSync);
 
 }; // namespace vr
 

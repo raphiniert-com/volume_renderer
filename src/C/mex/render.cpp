@@ -133,7 +133,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
   // sync_volumes
   if (!strcmp("sync_volumes", cmd)) {
-    mmanager_instance->timeLastMemSync = ((uint64_t*) prhs[2])[0];
+    mmanager_instance->timeLastMemSync = (uint64_t)mxGetScalar(prhs[2]);
 
     mmanager_instance->volumeEmission = mxMake_volume(prhs[3]);
     mmanager_instance->volumeReflection = mxMake_volume(prhs[4]);
@@ -153,6 +153,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       mmanager_instance->resetGradients();
     }
 
+    mmanager_instance->sync();
     setGradientMethod(tmp);
 
     // Warn if other commands were ignored
@@ -311,8 +312,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     // switch
     mwSize dim[3] = {imageResolution[0], imageResolution[1], 3};
 
-    float *result = render(block_size, grid_size, options, volumeEmission,
-                          volumeAbsorption, volumeReflection, color);
+    float *result = render(block_size, grid_size, options, volumeEmission.extent, color);
 
     mxArray *resultArray = mxCreateNumericArray(3, dim, mxSINGLE_CLASS, mxREAL);
 

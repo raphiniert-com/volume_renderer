@@ -577,7 +577,8 @@ void setIlluminationTexture(const Volume &aVolume) {
  *  \param aDy volume of gradient in y direction 
  *  \param aDz volume of gradient in z direction
  */
-void setGradientTextures(const Volume &aDx, const Volume &aDy,
+void setGradientTextures(const Volume &aDx, 
+                         const Volume &aDy,
                          const Volume &aDz) {
   createTextureFromVolume(tex_gradientX, aDx, d_gradientXArray);
   createTextureFromVolume(tex_gradientY, aDy, d_gradientYArray);
@@ -633,6 +634,8 @@ void initCuda(const Volume &aVolumeEmission, const Volume &aVolumeAbsorption,
         setReflectionTexture(aVolumeReflection);
       }
     }
+
+    cudaDeviceSynchronize();
 
     // no further check is necessary
     return;
@@ -711,49 +714,120 @@ void setGradientMethod(const vr::gradientMethod aMethod) {
 void syncWithDevice(const Volume &aVolumeEmission, const Volume &aVolumeAbsorption,
                     const Volume &aVolumeReflection, const uint64_t &timeLastMemSync) {
 
+  cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<VolumeDataType>();
 
-//   cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<VolumeDataType>();
+  // similarities of volumes
+  const bool simEmAb = (aVolumeEmission == aVolumeAbsorption);
+  const bool simEmRe = (aVolumeEmission == aVolumeReflection);
+  const bool simAbRe = (aVolumeAbsorption == aVolumeReflection);
 
-//   // if some stuff changed, copy new ressources to GPU and reset it beforehand
-//   if (aVolumeEmission.last_update >= timeLastMemSync) {
-//     HANDLE_ERROR(cudaUnbindTexture(tex_emission));
-//     HANDLE_ERROR(cudaFreeArray(d_emissionArray));
-    
-//     cudaArray *d_tmpEmissionArray = setEmissionTexture(const Volume &aVolumeEmission);
-//   }
+  // update required
+  const bool reqUpdateEm = (aVolumeEmission.last_update > timeLastMemSync) || (timeLastMemSync == 0);
+  const bool reqUpdateAb = (aVolumeAbsorption.last_update > timeLastMemSync) || (timeLastMemSync == 0);
+  const bool reqUpdateRe = (aVolumeReflection.last_update > timeLastMemSync) || (timeLastMemSync == 0);
 
-//   if (aVolumeEmission == aVolumeAbsorption) {
-// #ifdef DEBUG
-//     printf("Emission = Absorption\n");
-// #endif
+#ifdef DEBUG
+  mexPrintf("Emission %d\n", reqUpdateEm);
+  mexPrintf("Absorption %d\n", reqUpdateAb);
+  mexPrintf("Reflection %d\n", reqUpdateRe);
+#endif
 
-//     HANDLE_ERROR(cudaBindTextureToArray(tex_absorption, d_tmpEmissionArray,
-//                                         channelDesc));
-//   } else {
-//     cudaArray *d_tmpAbsorptionArray = setAbsorptionTexture(aVolumeAbsorption);
-//     if (aVolumeAbsorption == aVolumeReflection) {
-// #ifdef DEBUG
-//       printf("Absorption = Reflection\n");
-// #endif
-//       HANDLE_ERROR(cudaBindTextureToArray(tex_reflection, d_tmpAbsorptionArray,
-//                                           channelDesc));
-//     } else {
-//       if (aVolumeEmission == aVolumeReflection) {
-// #ifdef DEBUG
-//         printf("Emission = Reflection\n");
-// #endif
-//         HANDLE_ERROR(cudaBindTextureToArray(tex_reflection, d_tmpEmissionArray,
-//                                             channelDesc));
-//       } else {
-// #ifdef DEBUG
-//         printf("All Volumes are unique\n");
-// #endif
-//         setReflectionTexture(aVolumeReflection);
-//       }
-//     }
+  // TODO: rethink all these rules!
+  // FIXME: first image of ex1 seems to result black at first run. Find out why and fix it!
+  if (reqUpdateEm) {
+    HANDLE_ERROR(cudaUnbindTexture(tex_emission));
+    if (d_emissionArray != 0) {
+      HANDLE_ERROR(cudaFreeArray(d_emissionArray));
+      d_emissionArray = 0;
+    }
 
-//     // no further check is necessary
-//     return;
-  };
+    cudaArray *d_tmpEmissionArray = setEmissionTexture(aVolumeEmission);
+    cudaDeviceSynchronize();
+
+    if (simEmRe) {
+      HANDLE_ERROR(cudaUnbindTexture(tex_reflection));
+
+      if (d_reflectionArray != 0) {
+        HANDLE_ERROR(cudaFreeArray(d_reflectionArray));
+        d_reflectionArray = 0;
+      }
+      
+      // just reference to the same device variable
+      HANDLE_ERROR(cudaBindTextureToArray(tex_reflection, d_tmpEmissionArray, channelDesc));
+    }
+
+    if (simEmAb) {
+      HANDLE_ERROR(cudaUnbindTexture(tex_absorption));
+
+      if (d_absorptionArray != 0) {
+        HANDLE_ERROR(cudaFreeArray(d_absorptionArray));
+        d_absorptionArray = 0;
+      }
+      
+      // just reference to the same device variable
+      HANDLE_ERROR(cudaBindTextureToArray(tex_absorption, d_tmpEmissionArray, channelDesc));
+    }
+  }
+
+  if (reqUpdateAb && !simEmAb) {
+    HANDLE_ERROR(cudaUnbindTexture(tex_absorption));
+    if (d_absorptionArray != 0) {
+      HANDLE_ERROR(cudaFreeArray(d_absorptionArray));
+      d_absorptionArray = 0;
+    }
+
+    cudaArray *d_tmpAbsorptionArray = setAbsorptionTexture(aVolumeAbsorption);
+
+    if (simAbRe) {
+      HANDLE_ERROR(cudaUnbindTexture(tex_reflection));
+
+      if (d_reflectionArray != 0) {
+        HANDLE_ERROR(cudaFreeArray(d_reflectionArray));
+        d_reflectionArray = 0;
+      }
+      
+      // just reference to the same device variable
+      HANDLE_ERROR(cudaBindTextureToArray(tex_reflection, d_tmpAbsorptionArray, channelDesc));
+    }
+  }
+
+  if (reqUpdateAb && !simAbRe && !simEmAb) {
+    HANDLE_ERROR(cudaUnbindTexture(tex_reflection));
+    if (d_reflectionArray != 0) {
+      HANDLE_ERROR(cudaFreeArray(d_reflectionArray));
+      d_reflectionArray = 0;
+    }
+
+    setReflectionTexture(aVolumeReflection);
+  }
+
+  if (reqUpdateRe) {
+    if (!simEmRe) {
+      HANDLE_ERROR(cudaUnbindTexture(tex_reflection));
+      if (d_reflectionArray != 0) {
+        HANDLE_ERROR(cudaFreeArray(d_reflectionArray));
+        d_reflectionArray = 0;
+      }
+
+      cudaArray *d_tmpReflectionArray = setReflectionTexture(aVolumeReflection);
+
+      if (simAbRe) {
+        HANDLE_ERROR(cudaUnbindTexture(tex_reflection));
+        if (d_reflectionArray != 0) {
+          HANDLE_ERROR(cudaFreeArray(d_reflectionArray));
+          d_reflectionArray = 0;
+        }
+
+        // just reference to the same device variable
+        HANDLE_ERROR(cudaBindTextureToArray(tex_reflection, d_tmpReflectionArray, channelDesc));
+      }
+    }
+  }
+
+  cudaDeviceSynchronize();
+
+  // no further check is necessary
+  return;
+};
 } // namespace vr
 #endif // #ifndef _VOLUMERENDER_KERNEL_CU_

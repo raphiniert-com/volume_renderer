@@ -233,8 +233,7 @@ inline int cutGetMaxGflopsDeviceId() {
  *  \return pointer to the rendered 2D image
  */
 float *render(const dim3 &block_size, const dim3 &grid_size,
-              const RenderOptions &aOptions, const Volume &volumeEmission,
-              const Volume &aVolumeAbsorption, const Volume &aVolumeReflection,
+              const RenderOptions &aOptions, const cudaExtent &aVolumeExtent,
               const float3 &aColor) {
   // initCuda(aVolumeEmission, aVolumeAbsorption, aVolumeReflection);
 
@@ -274,9 +273,9 @@ float *render(const dim3 &block_size, const dim3 &grid_size,
   HANDLE_ERROR(cudaMalloc((void **)&d_output, size));
   HANDLE_ERROR(cudaMemset(d_output, 0, size));
 
-  const float3 gradientStep = make_float3(1.f / volumeEmission.extent.width,
-                                          1.f / volumeEmission.extent.height,
-                                          1.f / volumeEmission.extent.depth);
+  const float3 gradientStep = make_float3(1.f / aVolumeExtent.width,
+                                          1.f / aVolumeExtent.height,
+                                          1.f / aVolumeExtent.depth);
 
   render_kernel(d_output, block_size, grid_size, aOptions, aColor,
                 gradientStep);
@@ -295,10 +294,6 @@ float *render(const dim3 &block_size, const dim3 &grid_size,
 
   // free device memory
   cudaFree(d_output);
-  // freeCudaBuffers();
-  cudaDeviceSynchronize();
-
-  // cudaDeviceReset();
 
 #ifdef DEBUG
   printf("finished rendering..\n");
