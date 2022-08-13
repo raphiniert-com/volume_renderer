@@ -10,9 +10,9 @@ classdef Volume < handle
     end
     
     methods
-        function v=Volume(data)
-            addlistener(v,'Data','PostSet',@propEventHandler);
-            v.Data=single(data);
+        function this=Volume(data)
+            addlistener(this,'Data','PostSet',@propEventHandler);
+            this.Data=single(data);
         end
 
         function set.Data(obj, data)
@@ -55,7 +55,7 @@ classdef Volume < handle
                     (oldMax-oldMin) + newMin;
         end
     end
-end
+end % classdef
 
 % called whenever data of a volume is set/changed
 function propEventHandler(~,eventData)

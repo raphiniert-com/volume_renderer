@@ -20,6 +20,10 @@ classdef VolumeRender < handle
         RotationMatrix(3,3)   = eye(3);
         ImageResolution(1,2)  = [0,0];
         
+        TimeLastMemSync       = uint64(0);
+    end
+
+    properties(SetObservable)
         VolumeReflection      = Volume(1);
         
         VolumeEmission        = false;
@@ -28,8 +32,6 @@ classdef VolumeRender < handle
         VolumeGradientY       = false;
         VolumeGradientZ       = false;
         VolumeIllumination    = false;
-
-        TimeLastMemSync = uint64(0);
     end
 
     properties (SetAccess = private, Hidden = true)
@@ -39,6 +41,14 @@ classdef VolumeRender < handle
     methods        
         % Constructor
         function this = VolumeRender(varargin)
+            addlistener(this,'VolumeEmission','PostSet', @propEventHandler);
+            addlistener(this,'VolumeAbsorption','PostSet', @propEventHandler);
+            addlistener(this,'VolumeReflection','PostSet', @propEventHandler);
+            addlistener(this,'VolumeGradientX','PostSet', @propEventHandler);
+            addlistener(this,'VolumeGradientY','PostSet', @propEventHandler);
+            addlistener(this,'VolumeGradientZ','PostSet', @propEventHandler);
+            addlistener(this,'VolumeIllumination','PostSet', @propEventHandler);
+            
             this.objectHandle = volumeRender('new', varargin{:});
         end
 
@@ -144,7 +154,7 @@ classdef VolumeRender < handle
             end
         end
     end
-       
+    
     % set methods
     methods
         function set.LightSources(this, val)
@@ -342,3 +352,18 @@ classdef VolumeRender < handle
         end
     end
 end % classdef
+
+% called whenever data of a volume is set/changed
+function propEventHandler(~,eventData)
+    v = ["VolumeEmission", "VolumeAbsorption", "VolumeReflection", ...
+         "VolumeGradientX", "VolumeGradientY", "VolumeGradientZ", ...
+         "VolumeIllumination"];
+    if any(v == eventData.Source.Name)
+        switch eventData.EventName % Get the event name
+        case 'PostSet'
+            % set TimeLastUpdate to the current timestamp
+            eventData.AffectedObject.(eventData.Source.Name).TimeLastUpdate = timestamp;
+        end
+    end
+end
+
