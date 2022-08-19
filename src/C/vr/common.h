@@ -11,6 +11,9 @@
 #define COMMON_H_
 
 #include <cuda_runtime_api.h>
+#include <cuda_runtime.h>
+#include <helper_cuda.h>
+#include <helper_functions.h>
 #include <cuda.h>
 #include <sstream>
 #include <stdio.h>

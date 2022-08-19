@@ -7,15 +7,6 @@ namespace vr {
 
 namespace mm {
 
-enum VolumeType {
-    emission   = 0, 
-    absorption = 1, 
-    reflection = 2, 
-    dx = 3, 
-    dy = 4, 
-    dz = 5
-};
-
 class MManager
 {
 public:

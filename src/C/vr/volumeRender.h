@@ -119,9 +119,6 @@ float *render(const dim3 &block_size, const dim3 &grid_size,
               const RenderOptions &aOptions, const cudaExtent &aVolumeExtent,
               const float3 &aColor);
 
-void initCuda(const Volume &aVolumeEmission, const Volume &aVolumeAbsorption,
-              const Volume &aVolumeReflection);
-
 void render_kernel(float *d_output, const dim3 &block_size,
                    const dim3 &grid_size, const RenderOptions &options,
                    const float3 &volume_color, const float3 &aGradientStep);
@@ -138,17 +135,29 @@ inline int cutGetMaxGflopsDeviceId();
 
 Volume mxMake_volume(const mxArray *mxVolume);
 
-/*! \enum gradientMethod
+/*! \enum GradientMethod
  * 	\brief possible gradient computation methods
  */
-enum gradientMethod {
+enum GradientMethod : int {
   gradientCompute = 0, /*!< gradient computation on the fly */
   gradientLookup = 1   /*!< use LUT to estimate gradient */
 };
 
+/*! \enum VolumeType
+ * 	\brief possible volume types, which are used for memory management
+ */
+enum VolumeType : int {
+    emission   = 0, 
+    absorption = 1, 
+    reflection = 2, 
+    dx = 3, 
+    dy = 4, 
+    dz = 5
+};
+
 void freeCudaGradientBuffers();
 
-void setGradientMethod(const gradientMethod aMethod);
+void setGradientMethod(const GradientMethod aMethod);
 
 void syncWithDevice(const Volume &aVolumeEmission, const Volume &aVolumeAbsorption,
                     const Volume &aVolumeReflection, const uint64_t &timeLastMemSync);

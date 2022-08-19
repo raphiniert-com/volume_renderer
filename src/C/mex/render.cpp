@@ -140,7 +140,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     mmanager_instance->volumeAbsorption = mxMake_volume(prhs[5]);
 
     // assign gradient_function
-    vr::gradientMethod tmp = gradientCompute;
+    vr::GradientMethod tmp = gradientCompute;
 
     // gradient volume is given
     if (nrhs == 9) {

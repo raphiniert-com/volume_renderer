@@ -17,6 +17,7 @@
 #include <vector>
 #include <vr/volumeRender.h>
 
+
 #define ONE_OVER_2PI ((float)0.1591549430918953357688837633725143620344596457404564)
 #define PI2 ((float)6.2831853071795864769252867665590057683943387987502116)
 
@@ -50,10 +51,10 @@ __device__ float3 lookupGradient(const float3, const float3, const float3,
 __device__ gradientFunction gradient_functions[2] = {computeGradient,
                                                      lookupGradient};
 
-/*! \var __device__ __constant__ gradientMethod dc_activeGradientMethod
+/*! \var __device__ __constant__ GradientMethod dc_activeGradientMethod
  * 	\brief current chosen gradient Method. Default value is gradientCompute.
  */
-__device__ __constant__ vr::gradientMethod dc_activeGradientMethod = vr::gradientCompute;
+__device__ __constant__ vr::GradientMethod dc_activeGradientMethod = vr::gradientCompute;
 
 /*! \var vr::LightSource *d_lightSources
  * 	\brief device array of lightsources
@@ -100,6 +101,15 @@ cudaArray *d_reflectionArray = 0;
  */
 cudaArray *d_illuminationArray = 0;
 
+/*! \var const cudaChannelFormatDesc channelDesc
+ * 	\brief channel desc for textures
+ */
+const cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<vr::VolumeDataType>();
+
+__device__ vr::VolumeType d_idxEmmission = vr::VolumeType::emission;
+__device__ vr::VolumeType d_idxAbsorption = vr::VolumeType::emission;
+__device__ vr::VolumeType d_idxReflection = vr::VolumeType::reflection;
+
 /*! \var texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType> tex_emission 
  * \brief 3D texture for emission lookup
  */
@@ -134,6 +144,25 @@ texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType> tex_refl
  *  \brief 3D texture for illumination lookup
  */
 texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType> tex_illumination;
+
+__device__ texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType> getTexture(vr::VolumeType aType) {
+  switch (aType) {
+    case vr::VolumeType::emission:
+      return tex_emission;
+    case vr::VolumeType::absorption:
+      return tex_absorption;
+    case vr::VolumeType::reflection:
+      return tex_reflection;
+    case vr::VolumeType::dx:
+      return tex_gradientX;
+    case vr::VolumeType::dy:
+      return tex_gradientY;
+    case vr::VolumeType::dz:
+      return tex_gradientZ;
+    default:
+      return tex_emission;
+  }
+}
 
 /*! \fn int intersectBox(Ray aRay, float3 aBoxmin, float3 aBoxmax, float *aTnear, float *aTfar) 
  * \brief Intersect ray with a box. (see https://doi.org/10.1080/2151237X.2005.10129188) 
@@ -330,7 +359,7 @@ __device__ float3 shade(const float3 &aSamplePosition, const float3 aPosition,
 
     // lookup in d_reflectionArray/tex_reflection
     float reflection =
-        scaleReflection * tex3D(tex_reflection, aSamplePosition.x,
+        scaleReflection * tex3D(getTexture(d_idxReflection), aSamplePosition.x,
                                 aSamplePosition.y, aSamplePosition.z);
 
     float light = tex3D(tex_illumination, alpha, beta, gamma);
@@ -431,9 +460,9 @@ __global__ void d_render(float *d_aOutput, const vr::RenderOptions aOptions,
     // ################
 
     // read from 3D texture and apply several scale factor
-    float emission = scaleEmission * tex3D(tex_emission, pos_sample.x,
+    float emission = scaleEmission * tex3D(getTexture(d_idxEmmission), pos_sample.x,
                                            pos_sample.y, pos_sample.z);
-    float absorption = scaleAbsorption * tex3D(tex_absorption, pos_sample.x,
+    float absorption = scaleAbsorption * tex3D(getTexture(d_idxAbsorption), pos_sample.x,
                                                pos_sample.y, pos_sample.z);
 
     float3 sample = make_float3(emission);
@@ -499,7 +528,7 @@ __global__ void d_render(float *d_aOutput, const vr::RenderOptions aOptions,
 
 namespace vr {
 
-/*! \fn cudaArray* createTextureFromVolume(texture<VolumeDataType,
+/*! \fn void createTextureFromVolume(texture<VolumeDataType,
  *      cudaTextureType3D, cudaReadModeElementType>& aTex, const Volume& aVolume,
  * 			cudaArray* d_aArray, const bool aNormalized=true)
  *  \brief copies Volume from host to device
@@ -508,11 +537,10 @@ namespace vr {
  * 	\param d_aArray device array where the data are stored in/copied to
  * 	\return device pointer of the device array
  */
-cudaArray *createTextureFromVolume(
+void createTextureFromVolume(
     texture<VolumeDataType, cudaTextureType3D, cudaReadModeElementType> &aTex,
     const Volume &aVolume, cudaArray *d_aArray) {
-  // create 3D d_array
-  cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<VolumeDataType>();
+  
   if (d_aArray == 0)
     HANDLE_ERROR(cudaMalloc3DArray(&d_aArray, &channelDesc, aVolume.extent));
 
@@ -535,32 +563,6 @@ cudaArray *createTextureFromVolume(
 
   // bind d_aArray to 3D texture
   HANDLE_ERROR(cudaBindTextureToArray(aTex, d_aArray, channelDesc));
-
-  return d_aArray;
-}
-
-/*! \fn cudaArray* setEmissionTexture(const Volume& aVolume)
- *  \brief copies emission volume from host to device
- *  \param aVolume emission volume
- */
-inline cudaArray *setEmissionTexture(const Volume &aVolume) {
-  return createTextureFromVolume(tex_emission, aVolume, d_emissionArray);
-}
-
-/*! \fn cudaArray* setAbsorptionTexture(const Volume& aVolume)
- *  \brief copies absorption volume from host to device
- *  \param aVolume absorption volume
- */
-inline cudaArray *setAbsorptionTexture(const Volume &aVolume) {
-  return createTextureFromVolume(tex_absorption, aVolume, d_absorptionArray);
-}
-
-/*! \fn cudaArray* setReflectionTexture(const Volume& aVolume)
- *  \brief copies reflection volume from host to device
- *  \param aVolume reflection volume
- */
-inline cudaArray *setReflectionTexture(const Volume &aVolume) {
-  return createTextureFromVolume(tex_reflection, aVolume, d_reflectionArray);
 }
 
 /*! \fn cudaArray* setIlluminationTexture(const Volume& aVolume)
@@ -585,74 +587,9 @@ void setGradientTextures(const Volume &aDx,
   createTextureFromVolume(tex_gradientZ, aDz, d_gradientZArray);
 
   // assign gradient_function
-  vr::gradientMethod tmp = gradientLookup;
+  vr::GradientMethod tmp = gradientLookup;
   HANDLE_ERROR(cudaMemcpyToSymbol(dc_activeGradientMethod, &tmp,
-                                  sizeof(enum vr::gradientMethod)));
-}
-
-/*! \fn void initCuda(const Volume& aVolumeEmission,
-                      const Volume& aVolumeAbsorption,
-                      const Volume& aVolumeReflection)
- *  \brief Copies volume data to device and binds textures to the appropriate data.
- *         Data of one volume can be assigned to multiple textures.
- *  \param aVolumeEmission emission volume
- *  \param aVolumeAbsorption absorption volume
- * 	\param aVolumeReflection reflection volume
- */
-void initCuda(const Volume &aVolumeEmission, const Volume &aVolumeAbsorption,
-              const Volume &aVolumeReflection) {
-  cudaArray *d_tmpEmissionArray = setEmissionTexture(aVolumeEmission);
-
-  cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<VolumeDataType>();
-
-  if (aVolumeEmission == aVolumeAbsorption) {
-#ifdef DEBUG
-    printf("Emission = Absorption\n");
-#endif
-
-    HANDLE_ERROR(cudaBindTextureToArray(tex_absorption, d_tmpEmissionArray,
-                                        channelDesc));
-  } else {
-    cudaArray *d_tmpAbsorptionArray = setAbsorptionTexture(aVolumeAbsorption);
-    if (aVolumeAbsorption == aVolumeReflection) {
-#ifdef DEBUG
-      printf("Absorption = Reflection\n");
-#endif
-      HANDLE_ERROR(cudaBindTextureToArray(tex_reflection, d_tmpAbsorptionArray,
-                                          channelDesc));
-    } else {
-      if (aVolumeEmission == aVolumeReflection) {
-#ifdef DEBUG
-        printf("Emission = Reflection\n");
-#endif
-        HANDLE_ERROR(cudaBindTextureToArray(tex_reflection, d_tmpEmissionArray,
-                                            channelDesc));
-      } else {
-#ifdef DEBUG
-        printf("All Volumes are unique\n");
-#endif
-        setReflectionTexture(aVolumeReflection);
-      }
-    }
-
-    cudaDeviceSynchronize();
-
-    // no further check is necessary
-    return;
-  }
-
-  // check if reflection == absorption ( == emission)
-  if (aVolumeReflection == aVolumeAbsorption) {
-#ifdef DEBUG
-    printf("Absorption = Reflection\n");
-#endif
-    HANDLE_ERROR(cudaBindTextureToArray(tex_absorption, d_tmpEmissionArray,
-                                        channelDesc));
-  } else {
-    setReflectionTexture(aVolumeReflection);
-  }
-
-  return;
+                                  sizeof(enum vr::GradientMethod)));
 }
 
 /*! \fn void freeCudaBuffersGradients()
@@ -660,9 +597,9 @@ void initCuda(const Volume &aVolumeEmission, const Volume &aVolumeAbsorption,
  */
 void freeCudaGradientBuffers() {
   // get value of dc_activeGradientMethod from device to host
-  gradientMethod h_activeGradientMethod;
+  vr::GradientMethod h_activeGradientMethod;
   cudaMemcpyFromSymbol(&h_activeGradientMethod, dc_activeGradientMethod,
-                       sizeof(gradientMethod), 0);
+                       sizeof(vr::GradientMethod), 0);
 
   if (h_activeGradientMethod == gradientLookup) {
     HANDLE_ERROR(cudaFreeArray(d_gradientXArray));
@@ -689,7 +626,7 @@ void render_kernel(float *d_aOutput, const dim3 &block_size,
                                       d_lightSources, aGradientStep);
 }
 
-/*! \fn void copyLightSources()
+/*! \fn void copyLightSources(const LightSource *aLightSources, const size_t aNumOfLightSources)
  *  \brief copy light sources to device
  * 	\param aLightSources pointer to all light sources
  * 	\param aNumOfLightSources number of light sources
@@ -704,17 +641,79 @@ void copyLightSources(const LightSource *aLightSources,
   HANDLE_ERROR(cudaMemcpyToSymbol(c_numLightSources, &aNumOfLightSources,
                                   sizeof(size_t)));
 }
-// set gradientMethod
-void setGradientMethod(const vr::gradientMethod aMethod) {
+
+/*! \fn void setGradientMethod(const vr::GradientMethod)
+ *  \brief set gradientMethod
+ * 	\param aMethod kind of gradient method used while rendering
+ */
+void setGradientMethod(const vr::GradientMethod aMethod) {
   HANDLE_ERROR(
-    cudaMemcpyToSymbol(dc_activeGradientMethod, &aMethod, sizeof(enum vr::gradientMethod))
+    cudaMemcpyToSymbol(dc_activeGradientMethod, &aMethod, sizeof(enum vr::GradientMethod))
   );
 }
 
+/*! \fn void syncTexture(const textureReference& aTexture, const cudaArray* d_array, 
+                         const cudaArray* d_arrayRef, bool& aUpdated)
+ *  \brief sync texture
+ * 	\param d_array 
+ *  \param d_arrayRef 
+ * 	\param aTexture 
+ * 	\param aUpdated 
+ */
+void setupTexture(
+    texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType>& aTexture, 
+    cudaArray* d_aArray, vr::VolumeType& d_aIdx, vr::VolumeType aTypeAssigned, bool& aUpdated) {
+  
+  // clear memory
+  if (d_aArray != 0) {
+    HANDLE_ERROR(cudaUnbindTexture(aTexture));
+    HANDLE_ERROR(cudaFreeArray(d_aArray));
+    d_aArray = 0;
+  }
+  
+  // just reference to the same device variable
+  // HANDLE_ERROR(cudaBindTextureToArray(aTexture, d_aArrayRef, channelDesc));
+  aUpdated = true;
+  HANDLE_ERROR(
+    cudaMemcpyToSymbol(d_aIdx, &aTypeAssigned, sizeof(enum vr::VolumeType))
+  );
+}
+
+/*! \fn void syncVolume(cudaArray* d_array, const Volume& aVolume, 
+                               const textureReference& aTexture, bool& aUpdated)
+ *  \brief sync texture
+ * 	\param d_array 
+ * 	\param aVolume 
+ * 	\param aTexture 
+ * 	\param aUpdated 
+ */
+void syncVolume(
+    texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType>& aTexture,
+    cudaArray* d_aArray, const Volume& aVolume, bool& aUpdated) {
+  // clear memory
+  if (d_aArray != 0) {
+    HANDLE_ERROR(cudaUnbindTexture(aTexture));
+    HANDLE_ERROR(cudaFreeArray(d_aArray));
+    d_aArray = 0;
+  }
+
+  createTextureFromVolume(aTexture, aVolume, d_aArray);
+  aUpdated = true;
+}
+
+
+/*! \fn void syncWithDevice(const Volume &aVolumeEmission, const Volume &aVolumeAbsorption,
+                            const Volume &aVolumeReflection, const uint64_t &timeLastMemSync)
+ * \brief Copies volume data to device and binds textures to the appropriate data.
+ *         Data of one volume can be assigned to multiple textures and won't be copied to device, 
+ *         if nothing had been changed since the last rendering.
+ * \param aVolumeEmission
+ * \param aVolumeAbsorption
+ * \param aVolumeReflection
+ * \param timeLastMemSync
+ */
 void syncWithDevice(const Volume &aVolumeEmission, const Volume &aVolumeAbsorption,
                     const Volume &aVolumeReflection, const uint64_t &timeLastMemSync) {
-
-  cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<VolumeDataType>();
 
   // similarities of volumes
   const bool simEmAb = (aVolumeEmission == aVolumeAbsorption);
@@ -726,105 +725,103 @@ void syncWithDevice(const Volume &aVolumeEmission, const Volume &aVolumeAbsorpti
   const bool reqUpdateAb = (aVolumeAbsorption.last_update > timeLastMemSync) || (timeLastMemSync == 0);
   const bool reqUpdateRe = (aVolumeReflection.last_update > timeLastMemSync) || (timeLastMemSync == 0);
 
+  // save status
+  bool updatedEm = false;
+  bool updatedAb = false;
+  bool updatedRe = false;
+
 #ifdef DEBUG
   mexPrintf("Emission %d\n", reqUpdateEm);
   mexPrintf("Absorption %d\n", reqUpdateAb);
   mexPrintf("Reflection %d\n", reqUpdateRe);
 #endif
 
-  // TODO: rethink all these rules!
-  // FIXME: first image of ex1 seems to result black at first run. Find out why and fix it!
+  // conditionally update GPU memory and textures in order to save bandwidth
   if (reqUpdateEm) {
-    HANDLE_ERROR(cudaUnbindTexture(tex_emission));
-    if (d_emissionArray != 0) {
-      HANDLE_ERROR(cudaFreeArray(d_emissionArray));
-      d_emissionArray = 0;
+    if (!updatedEm) {
+      syncVolume(tex_emission, d_emissionArray, aVolumeEmission, updatedEm);
     }
 
-    cudaArray *d_tmpEmissionArray = setEmissionTexture(aVolumeEmission);
-    cudaDeviceSynchronize();
+    if (simEmRe && !updatedRe) {
+      setupTexture(tex_reflection, d_reflectionArray,
+                   d_idxReflection, vr::VolumeType::reflection, updatedRe);
 
-    if (simEmRe) {
-      HANDLE_ERROR(cudaUnbindTexture(tex_reflection));
-
-      if (d_reflectionArray != 0) {
-        HANDLE_ERROR(cudaFreeArray(d_reflectionArray));
-        d_reflectionArray = 0;
-      }
-      
-      // just reference to the same device variable
-      HANDLE_ERROR(cudaBindTextureToArray(tex_reflection, d_tmpEmissionArray, channelDesc));
+#ifdef DEBUG
+  mexPrintf("Emission = Reflection\n");
+  mexPrintf("setup Reflection\n");
+#endif
     }
 
-    if (simEmAb) {
-      HANDLE_ERROR(cudaUnbindTexture(tex_absorption));
-
-      if (d_absorptionArray != 0) {
-        HANDLE_ERROR(cudaFreeArray(d_absorptionArray));
-        d_absorptionArray = 0;
-      }
-      
-      // just reference to the same device variable
-      HANDLE_ERROR(cudaBindTextureToArray(tex_absorption, d_tmpEmissionArray, channelDesc));
+    if (simEmAb && !updatedAb) {
+      setupTexture(tex_absorption, d_absorptionArray,
+                   d_idxAbsorption, vr::VolumeType::emission, updatedAb);
+#ifdef DEBUG
+  mexPrintf("Emission = Absorption\n");
+  mexPrintf("setup Reflection: %d\n", updatedAb);
+#endif
     }
   }
 
-  if (reqUpdateAb && !simEmAb) {
-    HANDLE_ERROR(cudaUnbindTexture(tex_absorption));
-    if (d_absorptionArray != 0) {
-      HANDLE_ERROR(cudaFreeArray(d_absorptionArray));
-      d_absorptionArray = 0;
+  if (reqUpdateAb) {
+    if (!updatedAb) {
+      syncVolume(tex_absorption, d_absorptionArray, aVolumeAbsorption, updatedAb);
+
+#ifdef DEBUG
+  mexPrintf("Synced Volume Absorption\n");
+#endif
     }
 
-    cudaArray *d_tmpAbsorptionArray = setAbsorptionTexture(aVolumeAbsorption);
+    if (simAbRe && !updatedRe) {
+      setupTexture(tex_reflection, d_reflectionArray,
+                   d_idxReflection, vr::VolumeType::reflection, updatedRe);
+#ifdef DEBUG
+  mexPrintf("Absorption = Reflection\n");
+  mexPrintf("setup Reflection: %d\n", updatedRe);
+#endif
 
-    if (simAbRe) {
-      HANDLE_ERROR(cudaUnbindTexture(tex_reflection));
-
-      if (d_reflectionArray != 0) {
-        HANDLE_ERROR(cudaFreeArray(d_reflectionArray));
-        d_reflectionArray = 0;
-      }
-      
-      // just reference to the same device variable
-      HANDLE_ERROR(cudaBindTextureToArray(tex_reflection, d_tmpAbsorptionArray, channelDesc));
-    }
-  }
-
-  if (reqUpdateAb && !simAbRe && !simEmAb) {
-    HANDLE_ERROR(cudaUnbindTexture(tex_reflection));
-    if (d_reflectionArray != 0) {
-      HANDLE_ERROR(cudaFreeArray(d_reflectionArray));
-      d_reflectionArray = 0;
     }
 
-    setReflectionTexture(aVolumeReflection);
+    if (simEmAb && !updatedEm) {
+      setupTexture(tex_emission, d_emissionArray, 
+                   d_idxEmmission, vr::VolumeType::emission, updatedEm);
+
+#ifdef DEBUG
+  mexPrintf("Absorption = Emission\n");
+  mexPrintf("setup Emission: %d\n", updatedEm);
+#endif
+
+    }
   }
 
   if (reqUpdateRe) {
-    if (!simEmRe) {
-      HANDLE_ERROR(cudaUnbindTexture(tex_reflection));
-      if (d_reflectionArray != 0) {
-        HANDLE_ERROR(cudaFreeArray(d_reflectionArray));
-        d_reflectionArray = 0;
-      }
+    if (!updatedRe) {
+      syncVolume(tex_reflection, d_reflectionArray, aVolumeReflection, updatedRe);
 
-      cudaArray *d_tmpReflectionArray = setReflectionTexture(aVolumeReflection);
+#ifdef DEBUG
+  mexPrintf("Synced Volume Reflection\n");
+#endif
+    }
 
-      if (simAbRe) {
-        HANDLE_ERROR(cudaUnbindTexture(tex_reflection));
-        if (d_reflectionArray != 0) {
-          HANDLE_ERROR(cudaFreeArray(d_reflectionArray));
-          d_reflectionArray = 0;
-        }
+    if (simAbRe && !updatedAb) {
+      setupTexture(tex_absorption, d_absorptionArray, 
+                   d_idxAbsorption, vr::VolumeType::absorption, updatedAb);
 
-        // just reference to the same device variable
-        HANDLE_ERROR(cudaBindTextureToArray(tex_reflection, d_tmpReflectionArray, channelDesc));
-      }
+#ifdef DEBUG
+  mexPrintf("Reflection = Absorption\n");
+  mexPrintf("setup Absorption: %d\n", updatedAb);
+#endif
+
+    }
+
+    if (simEmAb && !updatedEm) {
+      setupTexture(tex_emission, d_emissionArray, 
+                   d_idxEmmission, vr::VolumeType::emission, updatedEm);
+#ifdef DEBUG
+  mexPrintf("Reflection = Emission\n");
+  mexPrintf("setup Emission: %d\n", updatedEm);
+#endif
     }
   }
-
-  cudaDeviceSynchronize();
 
   // no further check is necessary
   return;
