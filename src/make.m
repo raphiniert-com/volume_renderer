@@ -3,7 +3,7 @@
 setenv('MW_NVCC_PATH','C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.7\bin')
 
 % enable if debug output of renderer is desired
-debug=false;
+debug=true;
 
 directory_content = dir; % contains everything of the current directory
 exe_path = directory_content(1).folder; % returns the path that is currently open

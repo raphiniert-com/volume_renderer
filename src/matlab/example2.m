@@ -1,10 +1,10 @@
 % This example uses one channel and one LightSource to render a movie.
 
 % add VolumeRender to path
-addpath('VolumeRender');
+addpath('matlab/VolumeRender');
 
 % folder to the volume files
-path='../../h5-data/';
+path='../h5-data/';
 
 filename = [path '/ViBE-Z_72hpf_v1.h5']; dataset = '/anatomy/average_brain';
 

@@ -2,10 +2,10 @@
 % Furthermore, we implemented special effects.
 
 % add VolumeRender to path
-addpath('VolumeRender');
+addpath('matlab/VolumeRender');
 
 % some tests for the matlab-C++ connection
-path='../../h5-data/';
+path='../h5-data/';
 
 filename = [path '/ViBE-Z_72hpf_v1.h5']; 
 
