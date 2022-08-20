@@ -139,6 +139,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     mmanager_instance->volumeReflection = mxMake_volume(prhs[4]);
     mmanager_instance->volumeAbsorption = mxMake_volume(prhs[5]);
 
+
     // assign gradient_function
     vr::GradientMethod tmp = gradientCompute;
 
@@ -185,6 +186,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       // get size num lights
       const size_t numLightSources = mxGetN(mxLightSources);
       const Volume volumeLight = mxMake_volume(mxVolumeLight);
+      mmanager_instance->volumeLight = mxMake_volume(mxVolumeLight);
 
   #ifdef DEBUG
       mexPrintf("Setting up %d Lightsources\n", numLightSources);
@@ -214,7 +216,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
       // copy to GPU
       copyLightSources(lightSources, numLightSources);
-      setIlluminationTexture(volumeLight);
+      mmanager_instance->ptr_d_volumeLight = 
+        setIlluminationTexture(volumeLight, mmanager_instance->ptr_d_volumeLight);
 
       // compute needed RAM
       requiredRAM += volumeLight.memory_size + 
@@ -294,15 +297,21 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       requiredRAM += volumeReflection.memory_size;
     }
 
-    // if gradients are passed through
+    // // if gradients are passed through
     // if (nrhs == MIN_ARGS + 3) {
     //   Volume dx = mxMake_volume(prhs[MIN_ARGS]);
     //   Volume dy = mxMake_volume(prhs[MIN_ARGS + 1]);
     //   Volume dz = mxMake_volume(prhs[MIN_ARGS + 2]);
 
-    //   setGradientTextures(dx, dy, dz);
+    //   setGradientTextures(
+    //     mmanager_instance->volumeDx, 
+    //     mmanager_instance->volumeDy, 
+    //     mmanager_instance->volumeDz,
+    //     mmanager_instance->ptr_d_volumeDx,
+    //     mmanager_instance->ptr_d_volumeDy,
+    //     mmanager_instance->ptr_d_volumeDz);
 
-    //   requiredRAM += dx.memory_size + dy.memory_size + dz.memory_size;
+    //   // requiredRAM += dx.memory_size + dy.memory_size + dz.memory_size;
     // }
 
     // check if there is enough free VRam
@@ -311,6 +320,15 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
     // switch
     mwSize dim[3] = {imageResolution[0], imageResolution[1], 3};
+
+#ifdef DEBUG
+    mexPrintf("scale ab: %f\n", options.scale_absorption);
+    mexPrintf("scale em: %f\n", options.scale_emission);
+    mexPrintf("scale re: %f\n", options.scale_reflection);
+    mexPrintf("height: %lu\n", options.image_height);
+    mexPrintf("width: %lu\n", options.image_width);
+    mexPrintf("opacity: %f\n", options.opacity_threshold);
+#endif
 
     float *result = render(block_size, grid_size, options, volumeEmission.extent, color);
 
@@ -328,6 +346,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
     // free host memory
     free(result);
+    cudaDeviceReset();
 
     return;
   }

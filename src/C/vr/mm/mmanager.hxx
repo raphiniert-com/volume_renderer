@@ -21,6 +21,20 @@ public:
     Volume& volumeDy = make_volume(NULL, 0, make_cudaExtent(0,0,0));
     Volume& volumeDz = make_volume(NULL, 0, make_cudaExtent(0,0,0));
 
+    Volume& volumeLight = make_volume(NULL, 0, make_cudaExtent(0,0,0));
+
+    // pointer to device addresses
+    cudaArray * ptr_d_volumeEmission = 0;
+    cudaArray * ptr_d_volumeAbsorption = 0;
+    cudaArray * ptr_d_volumeReflection = 0;
+
+    cudaArray * ptr_d_volumeDx = 0;
+    cudaArray * ptr_d_volumeDy = 0;
+    cudaArray * ptr_d_volumeDz = 0;
+    
+    cudaArray * ptr_d_volumeLight = 0;
+
+
     // member functions
     MManager() {}
     ~MManager() {
@@ -28,15 +42,21 @@ public:
     }
 
     void sync() {
-        syncWithDevice(this->volumeEmission, this->volumeAbsorption, 
-            this->volumeReflection, this->timeLastMemSync);
+        syncWithDevice(this->volumeEmission, this->volumeAbsorption,
+            this->volumeReflection, this->timeLastMemSync,
+            this->ptr_d_volumeEmission,
+            this->ptr_d_volumeAbsorption,
+            this->ptr_d_volumeReflection);
         mexPrintf("last sync: %u\n", this->timeLastMemSync);
         
         // initCuda(this->volumeEmission, this->volumeAbsorption, this->volumeReflection);
 
         if (this->volumeDx.last_update != 0 && this->volumeDy.last_update != 0 && 
             this->volumeDz.last_update != 0) {
-            setGradientTextures(this->volumeDx, this->volumeDy, this->volumeDz);
+            setGradientTextures(
+                this->volumeDx, this->volumeDy, this->volumeDz,
+                this->ptr_d_volumeDx, this->ptr_d_volumeDy, this->ptr_d_volumeDz
+            );
         }
     }
 
@@ -76,16 +96,25 @@ public:
             << "\t\t-------"
             << "\n"
             << "\t\tEmission (MB): " << this->bytesToMB(this->volumeEmission.memory_size)
+            << " ptr: " << this->ptr_d_volumeEmission
             << "\n"
             << "\t\tAbsorption (MB): " << this->bytesToMB(this->volumeAbsorption.memory_size)
+            << " ptr: " << this->ptr_d_volumeAbsorption
             << "\n"
             << "\t\tReflection (MB): " << this->bytesToMB(this->volumeReflection.memory_size)
+            << " ptr: " << this->ptr_d_volumeReflection
             << "\n"
             << "\t\tdX (MB): " << this->bytesToMB(this->volumeDx.memory_size)
+            << " ptr: " << this->ptr_d_volumeDx
             << "\n"
             << "\t\tdX (MB): " << this->bytesToMB(this->volumeDy.memory_size)
+            << " ptr: " << this->ptr_d_volumeDy
             << "\n"
             << "\t\tdX (MB): " << this->bytesToMB(this->volumeDz.memory_size)
+            << " ptr: " << this->ptr_d_volumeDz
+            << "\n"
+            << "\t\tlight (MB): " << this->bytesToMB(this->volumeLight.memory_size)
+            << " ptr: " << this->ptr_d_volumeLight
             << "\n"
             << "\n"
             << "\t\tSimilarity of Volumes"

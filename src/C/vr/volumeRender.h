@@ -125,9 +125,10 @@ void render_kernel(float *d_output, const dim3 &block_size,
 
 void copyLightSources(const LightSource *lightSources, const size_t count);
 
-void setIlluminationTexture(const Volume &volume);
+cudaArray * setIlluminationTexture(const Volume &volume, cudaArray * &ptr);
 
-void setGradientTextures(const Volume &dx, const Volume &dy, const Volume &dz);
+void setGradientTextures(const Volume &dx, const Volume &dy, const Volume &dz, 
+  cudaArray * &ptr_d_volumeDx, cudaArray * &ptr_d_volumeDy, cudaArray * &ptr_d_volumeDz);
 
 size_t iDivUp(size_t a, size_t b);
 
@@ -152,7 +153,8 @@ enum VolumeType : int {
     reflection = 2, 
     dx = 3, 
     dy = 4, 
-    dz = 5
+    dz = 5,
+    light = 6
 };
 
 void freeCudaGradientBuffers();
@@ -160,7 +162,9 @@ void freeCudaGradientBuffers();
 void setGradientMethod(const GradientMethod aMethod);
 
 void syncWithDevice(const Volume &aVolumeEmission, const Volume &aVolumeAbsorption,
-                    const Volume &aVolumeReflection, const uint64_t &timeLastMemSync);
+                    const Volume &aVolumeReflection, const uint64_t &timeLastMemSync,
+                    cudaArray *  &d_aVolumeEmission, cudaArray *  &d_aVolumeAbsorption, 
+                    cudaArray *  &d_aVolumeReflection);
 
 }; // namespace vr
 
