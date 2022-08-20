@@ -63,8 +63,9 @@ absorptionVolume.normalize(0,1);
 render.VolumeEmission=emission_main;
 render.VolumeAbsorption=absorptionVolume;
 % make it kind of transparent
-render.ScaleAbsorption=0.03;
-render.ScaleReflection=0.4;
+render.ScaleEmission=10;
+render.ScaleAbsorption=0.8;
+render.ScaleReflection=0.9;
 render.Color = [1,1,1];
 
 % render.syncVolumes();
