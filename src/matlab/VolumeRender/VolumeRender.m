@@ -115,9 +115,6 @@ classdef VolumeRender < handle
             % rendering image. If CmaeraXOffset does not equal 0
             % a 3D anaglyph will be returned
             % image     output (3D) image
-
-            % sync images onto the device
-            this.syncVolumes()
             
             if (this.CameraXOffset==0)
                 image=p_render(this, single(this.CameraXOffset), flip(this.ImageResolution));
@@ -160,6 +157,13 @@ classdef VolumeRender < handle
     
     % set methods
     methods
+        function resetGradientVolumes(this)
+            % reset gradient volumes in order to switch render to gradient computation
+            this.VolumeGradientX       = false;
+            this.VolumeGradientY       = false;
+            this.VolumeGradientZ       = false;
+        end
+
         function set.LightSources(this, val)
             % ensure correct type
             if (all(isa(val, 'LightSource')))
@@ -194,24 +198,24 @@ classdef VolumeRender < handle
         end
         
         function set.VolumeGradientX(this, val)
-            if (isa(val,'Volume'))
+            if (isa(val,'Volume') || val == false)
                 this.VolumeGradientX = val;
             else
-                error('VolumeReflection must be of type Volume');
+                error('VolumeGradientX must be of type Volume');
             end
         end
         function set.VolumeGradientY(this, val)
-            if (isa(val,'Volume'))
+            if (isa(val,'Volume') || val == false)
                 this.VolumeGradientY = val;
             else
-                error('VolumeReflection must be of type Volume');
+                error('VolumeGradientY must be of type Volume');
             end
         end
         function set.VolumeGradientZ(this, val)
-            if (is(val,'Volume'))
+            if (isa(val,'Volume') || val == false)
                 this.VolumeGradientZ = val;
             else
-                error('VolumeReflection must be of type Volume');
+                error('VolumeGradientZ must be of type Volume');
             end
         end
         
@@ -258,17 +262,30 @@ classdef VolumeRender < handle
                 display(validate);
                 error('Not all volumes are properly set!');
             end
-                  
+
+            % check if gradient volumes are set properly
+            renderWithgradientVolumes=false;
+            if (not(any([islogical(this.VolumeGradientX), ...
+                         islogical(this.VolumeGradientY), ...
+                         islogical(this.VolumeGradientZ)])))
+                if not(all([isa(this.VolumeGradientX, 'Volume') ...
+                            isa(this.VolumeGradientY, 'Volume') ...
+                            isa(this.VolumeGradientZ, 'Volume')]))
+                    error('All gradient dimensions need to be set and of type Volume!');
+                else
+                    renderWithgradientVolumes=true;
+                end
+            end
+
+            % sync volumes onto the device
+            this.syncVolumes()
+            
             scales=[this.ScaleEmission, this.ScaleReflection, this.ScaleAbsorption];
             props=[CameraXOffset, this.FocalLength, this.DistanceToObject];
 
-            validate =  [islogical(this.VolumeGradientX), ...
-                         islogical(this.VolumeGradientY), ...
-                         islogical(this.VolumeGradientZ)];
-
             matrix=flip(this.RotationMatrix);
 
-            if (all(not(validate)))
+            if (renderWithgradientVolumes)
                 image = volumeRender('render', this.objectHandle, ...
                                this.LightSources, ...
                                this.VolumeEmission, ...
@@ -364,8 +381,10 @@ function propEventHandler(~,eventData)
     if any(v == eventData.Source.Name)
         switch eventData.EventName % Get the event name
         case 'PostSet'
-            % set TimeLastUpdate to the current timestamp
-            eventData.AffectedObject.(eventData.Source.Name).TimeLastUpdate = timestamp;
+            % set TimeLastUpdate to the current timestamp if volume
+            if (isa(eventData.AffectedObject.(eventData.Source.Name), 'Volume'))
+                eventData.AffectedObject.(eventData.Source.Name).TimeLastUpdate = timestamp;
+            end
         end
     end
 end
