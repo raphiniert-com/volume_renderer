@@ -47,8 +47,19 @@ classdef Volume < handle
           value=min(obj.Data(:));
         end
 
-        function [gx, gy, gz]=grad(obj)
-             [gx, gy, gz]=gradient(obj.Data);
+        function [gx, gy, gz]=grad(obj, varargin)
+             [data_x, data_y, data_z]=gradient(obj.Data);
+             gx=Volume(data_x);
+             gy=Volume(data_y);
+             gz=Volume(data_z);
+
+
+             if ( length(varargin) == 1 )
+                newsize = varargin{1};
+                gx.resize(newsize);
+                gy.resize(newsize);
+                gz.resize(newsize);
+             end
         end
 
         function normalize(obj, newMin, newMax)
