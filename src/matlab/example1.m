@@ -55,6 +55,8 @@ render.Color = [1,1,0];
 
 rendered_image_structure = render.render();
 
+ render.memInfo();
+
 %% second image (main zebra fish)
 absorptionVolume=Volume(data_main);
 absorptionVolume.resize(0.5);
@@ -73,10 +75,16 @@ render.Color = [1,1,1];
 
 rendered_image_main = render.render();
 
+render.memInfo();
+
+imshow(render.render());
+
 %% display the images and the combined one
-figure;
-imshow(rendered_image_main);
-figure;
-imshow(rendered_image_structure);
-figure;
-imshow(rendered_image_main+rendered_image_structure);
+% figure;
+% imshow(rendered_image_main);
+% figure;
+% imshow(rendered_image_structure);
+% figure;
+% imshow(rendered_image_main+rendered_image_structure);
+% figure;
+% imshow(render.render());

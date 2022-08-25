@@ -125,7 +125,7 @@ void render_kernel(float *d_output, const dim3 &block_size,
 
 void copyLightSources(const LightSource *lightSources, const size_t count);
 
-cudaArray * setIlluminationTexture(const Volume &volume, cudaArray * &ptr);
+cudaArray * setIlluminationTexture(const Volume &volume, cudaArray * ptr, const uint64_t timeLastMemSync);
 
 void setGradientTextures(const Volume &dx, const Volume &dy, const Volume &dz, 
   cudaArray * &ptr_d_volumeDx, cudaArray * &ptr_d_volumeDy, cudaArray * &ptr_d_volumeDz);

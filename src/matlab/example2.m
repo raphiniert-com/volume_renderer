@@ -39,11 +39,12 @@ render.ImageResolution= ...
 render.VolumeEmission = emission_main;
 render.VolumeAbsorption = emission_main;
 render.ScaleReflection = 0.3;
+render.ScaleEmission=10;
 
 render.Color = [1,1,1];
 
 
-nStep=60;
+nStep=5;
 rendered_image = zeros([size(emission_main.Data,2), ...
                         size(emission_main.Data,1), ...
                         3, 360/nStep]);

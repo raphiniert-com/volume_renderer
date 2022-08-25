@@ -217,7 +217,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       // copy to GPU
       copyLightSources(lightSources, numLightSources);
       mmanager_instance->ptr_d_volumeLight = 
-        setIlluminationTexture(volumeLight, mmanager_instance->ptr_d_volumeLight);
+        setIlluminationTexture(volumeLight,
+        mmanager_instance->ptr_d_volumeLight,
+          mmanager_instance->timeLastMemSync);
 
       // compute needed RAM
       requiredRAM += volumeLight.memory_size + 
