@@ -718,6 +718,8 @@ void syncWithDevice(const Volume &aVolumeEmission, const Volume &aVolumeAbsorpti
                     cudaArray * &d_aVolumeEmission, cudaArray * &d_aVolumeAbsorption, 
                     cudaArray * &d_aVolumeReflection) {
 
+  // TODO: implement Volume swapping functionality, i.e. if Volume swap, the device memory does not require deletion
+
   // similarities of volumes
   const bool simEmAb = (aVolumeEmission == aVolumeAbsorption);
   const bool simEmRe = (aVolumeEmission == aVolumeReflection);
