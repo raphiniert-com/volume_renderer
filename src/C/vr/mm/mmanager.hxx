@@ -42,26 +42,33 @@ public:
     }
 
     void sync() {
+        // reset cuda memory of gradient volumes, if not set anymore
+        if ((this->volumeDx.last_update == 0 && this->ptr_d_volumeDx != 0) ||
+            (this->volumeDy.last_update == 0 && this->ptr_d_volumeDy != 0) ||
+            (this->volumeDz.last_update == 0 && this->ptr_d_volumeDz != 0)) {
+                freeCudaGradientBuffers(this->ptr_d_volumeDx, this->ptr_d_volumeDy, this->ptr_d_volumeDz);
+            }
+
         syncWithDevice(this->volumeEmission, this->volumeAbsorption,
             this->volumeReflection, this->timeLastMemSync,
             this->ptr_d_volumeEmission,
             this->ptr_d_volumeAbsorption,
             this->ptr_d_volumeReflection);
         mexPrintf("last sync: %u\n", this->timeLastMemSync);
-        
-        // initCuda(this->volumeEmission, this->volumeAbsorption, this->volumeReflection);
 
         if (this->volumeDx.last_update != 0 && this->volumeDy.last_update != 0 && 
             this->volumeDz.last_update != 0) {
             setGradientTextures(
                 this->volumeDx, this->volumeDy, this->volumeDz,
-                this->ptr_d_volumeDx, this->ptr_d_volumeDy, this->ptr_d_volumeDz
+                this->ptr_d_volumeDx, this->ptr_d_volumeDy, this->ptr_d_volumeDz,
+                this->timeLastMemSync
             );
         }
     }
 
     void resetGradients() {
-        freeCudaGradientBuffers();
+        if (this->ptr_d_volumeDx == 0 || this->ptr_d_volumeDy == 0 || this->ptr_d_volumeDz == 0)
+            freeCudaGradientBuffers(this->ptr_d_volumeDx, this->ptr_d_volumeDy, this->ptr_d_volumeDz);
 
         volumeDx = make_volume(NULL, 0, make_cudaExtent(0,0,0));
         volumeDy = make_volume(NULL, 0, make_cudaExtent(0,0,0));

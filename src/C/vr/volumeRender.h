@@ -128,7 +128,7 @@ void copyLightSources(const LightSource *lightSources, const size_t count);
 cudaArray * setIlluminationTexture(const Volume &volume, cudaArray * ptr, const uint64_t timeLastMemSync);
 
 void setGradientTextures(const Volume &dx, const Volume &dy, const Volume &dz, 
-  cudaArray * &ptr_d_volumeDx, cudaArray * &ptr_d_volumeDy, cudaArray * &ptr_d_volumeDz);
+  cudaArray * &ptr_d_volumeDx, cudaArray * &ptr_d_volumeDy, cudaArray * &ptr_d_volumeDz, const uint64_t timeLastMemSync);
 
 size_t iDivUp(size_t a, size_t b);
 
@@ -157,12 +157,16 @@ enum VolumeType : int {
     light = 6
 };
 
-void freeCudaGradientBuffers();
+void freeCudaGradientBuffers(
+  cudaArray * d_aGradientXArray,
+  cudaArray * d_aGradientYArray,
+  cudaArray * d_aGradientZArray
+);
 
 void setGradientMethod(const GradientMethod aMethod);
 
 void syncWithDevice(const Volume &aVolumeEmission, const Volume &aVolumeAbsorption,
-                    const Volume &aVolumeReflection, const uint64_t &timeLastMemSync,
+                    const Volume &aVolumeReflection, const uint64_t timeLastMemSync,
                     cudaArray *  &d_aVolumeEmission, cudaArray *  &d_aVolumeAbsorption, 
                     cudaArray *  &d_aVolumeReflection);
 
