@@ -50,9 +50,6 @@ render.ScaleReflection=0.4;
 
 render.Color = [1,1,0];
 
-% render.syncVolumes();
-% render.memInfo();
-
 rendered_image_structure = render.render();
 
  render.memInfo();
@@ -65,26 +62,20 @@ absorptionVolume.normalize(0,1);
 render.VolumeEmission=emission_main;
 render.VolumeAbsorption=absorptionVolume;
 % make it kind of transparent
-render.ScaleEmission=10;
-render.ScaleAbsorption=0.8;
-render.ScaleReflection=0.9;
+render.ScaleEmission=0.1;
+render.ScaleAbsorption=0.4;
+render.ScaleReflection=0.1;
 render.Color = [1,1,1];
-
-% render.syncVolumes();
-% render.memInfo();
 
 rendered_image_main = render.render();
 
-render.memInfo();
-
-imshow(render.render());
 
 %% display the images and the combined one
-% figure;
-% imshow(rendered_image_main);
-% figure;
-% imshow(rendered_image_structure);
-% figure;
-% imshow(rendered_image_main+rendered_image_structure);
-% figure;
-% imshow(render.render());
+figure;
+imshow(rendered_image_main);
+figure;
+imshow(rendered_image_structure);
+figure;
+imshow(rendered_image_main+rendered_image_structure);
+figure;
+imshow(render.render());
