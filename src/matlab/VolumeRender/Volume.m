@@ -64,10 +64,10 @@ classdef Volume < handle
 
         function normalize(obj, newMin, newMax)
         % linear normalization
-           oldMax=obj.max();
-           oldMin=obj.min();
-           obj.Data=(obj.Data-oldMin) * (newMax - newMin)/ ...
-                    (oldMax-oldMin) + newMin;
+           max=obj.max();
+           min=obj.min();
+           obj.Data=(obj.Data-min) * (newMax - newMin)/ ...
+                    (max-min) + newMin;
         end
     end
 end % classdef
