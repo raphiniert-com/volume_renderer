@@ -253,14 +253,12 @@ __device__ float3 lookupGradient(const float3 aSamplePosition,
                                  const float3 aPosition, const float3 aStep,
                                  const float3 aBoxmin, const float3 aBoxmax,
                                  const float3 aBoxScale) {
-  float3 scaledPosition = aSamplePosition * aBoxScale;
-
-  return make_float3(tex3D(tex_gradientX, scaledPosition.x, scaledPosition.y,
-                           scaledPosition.z),
-                     tex3D(tex_gradientY, scaledPosition.x, scaledPosition.y,
-                           scaledPosition.z),
-                     tex3D(tex_gradientZ, scaledPosition.x, scaledPosition.y,
-                           scaledPosition.z));
+  return make_float3(tex3D(tex_gradientX, aSamplePosition.x, aSamplePosition.y,
+                           aSamplePosition.z),
+                     tex3D(tex_gradientY, aSamplePosition.x, aSamplePosition.y,
+                           aSamplePosition.z),
+                     tex3D(tex_gradientZ, aSamplePosition.x, aSamplePosition.y,
+                           aSamplePosition.z));
 }
 
 /*! \fn float angle(const float3& a, const float3& b)

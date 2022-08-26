@@ -19,7 +19,7 @@ data_structure = h5read(filename, dataset);
 % elementSizeUm = h5readatt(filename, dataset,'element_size_um');
 emission_structure = Volume(data_structure);
 
-[gX, gY, gZ] = emission_structure.grad();
+[gX, gY, gZ] = emission_main.grad();
 
 
 %% setup general render settings
@@ -91,15 +91,6 @@ render.memInfo();
 %% with gradient computation
 render.resetGradientVolumes();
 rendered_image_grad_computed = render.render();
-
-disp(all(rendered_image_grad_computed(:) == rendered_image_main(:)));
-
-img = Volume(rendered_image_main);
-img.normalize(0,1);
-figure;
-imshow(img.Data);
-
-imshow(abs(rendered_image_main - rendered_image_grad_computed));
 
 figure;
 imshow(rendered_image_grad_computed);
