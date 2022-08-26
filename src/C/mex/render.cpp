@@ -84,7 +84,7 @@ void checkFreeDeviceMemory(size_t aRequiredRAMInBytes) {
   }
 }
 
-#define MIN_ARGS 14
+#define MIN_ARGS 11
 
 /*! \fn void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray prhs[] ) 
  *  \brief connects matlab with the renderer
