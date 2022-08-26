@@ -717,11 +717,6 @@ void syncWithDevice(const Volume &aVolumeEmission, const Volume &aVolumeAbsorpti
   const bool reqUpdateAb = (aVolumeAbsorption.last_update > aTimeLastMemSync) || (aTimeLastMemSync == 0);
   const bool reqUpdateRe = (aVolumeReflection.last_update > aTimeLastMemSync) || (aTimeLastMemSync == 0);
 
-  bool freeEm = false;
-  bool freeAb = false;
-  bool freeRe = false;
-
-
   // save status
   bool updatedEm = false;
   bool updatedAb = false;
@@ -738,7 +733,7 @@ void syncWithDevice(const Volume &aVolumeEmission, const Volume &aVolumeAbsorpti
     if (!updatedEm) {
       // cudaArray * syncVolume(    texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType>& aTexture,    cudaArray* &d_aArray, const Volume& aVolume, const bool aAllocateMemory, bool aFreeMemory=true) {
 
-      d_aVolumeEmission = syncVolume(tex_emission, d_aVolumeEmission, aVolumeEmission, updatedEm, freeEm);
+      d_aVolumeEmission = syncVolume(tex_emission, d_aVolumeEmission, aVolumeEmission, updatedEm);
       updatedEm = true;
     }
 
@@ -766,7 +761,7 @@ void syncWithDevice(const Volume &aVolumeEmission, const Volume &aVolumeAbsorpti
   if (reqUpdateAb) {
     if (!updatedAb) {
       d_aVolumeAbsorption =
-          syncVolume(tex_absorption, d_aVolumeAbsorption, aVolumeAbsorption, updatedAb, freeAb);
+          syncVolume(tex_absorption, d_aVolumeAbsorption, aVolumeAbsorption, updatedAb);
       updatedAb = true;
 
 #ifdef DEBUG
@@ -800,7 +795,7 @@ void syncWithDevice(const Volume &aVolumeEmission, const Volume &aVolumeAbsorpti
   if (reqUpdateRe) {
     if (!updatedRe) {
       d_aVolumeReflection = 
-          syncVolume(tex_reflection, d_aVolumeReflection, aVolumeReflection, reqUpdateRe, freeRe);
+          syncVolume(tex_reflection, d_aVolumeReflection, aVolumeReflection, reqUpdateRe);
       updatedRe = true;
 
 #ifdef DEBUG

@@ -94,10 +94,3 @@ rendered_image_grad_computed = render.render();
 
 figure;
 imshow(rendered_image_grad_computed);
-
-%% volume swap test
-% render.VolumeEmission=absorptionVolume;
-% render.VolumeAbsorption=emission_main;
-% 
-% figure;
-% imshow(render.render());
