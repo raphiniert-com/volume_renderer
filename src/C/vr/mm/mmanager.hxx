@@ -42,78 +42,107 @@ public:
         cudaDeviceReset();
     }
 
-    bool checkFreeGpuMemory() {
-        // // compute required ram
+    size_t getRequiredMemory() {
+        size_t requiredRAM = 0;
         // // emission is required in anycase
-        // requiredRAM += mmanager_instance->volumeEmission.memory_size;
+        requiredRAM += this->volumeEmission.memory_size;
 
-        // // check if absorption is unique
-        // if (volumeEmission != volumeAbsorption &&
-        //     volumeReflection != volumeAbsorption) {
-        //   requiredRAM += mmanager_instance->volumeAbsorption.memory_size;
-        // }
+        // check if absorption is unique
+        if (this->volumeEmission != this->volumeAbsorption &&
+            this->volumeReflection != this->volumeAbsorption) {
+          requiredRAM += this->volumeAbsorption.memory_size;
+        }
 
-        // // check if reflection is unique
-        // if (volumeEmission != volumeReflection &&
-        //     volumeReflection != volumeAbsorption) {
-        //   requiredRAM += volumeReflection.memory_size;
-        // }
+        // check if reflection is unique
+        if (this->volumeEmission != this->volumeReflection &&
+           this-> volumeReflection != this->volumeAbsorption) {
+          requiredRAM += this->volumeReflection.memory_size;
+        }
 
-        // // if gradients are passed through
-        // if (nrhs == MIN_ARGS + 3) {
-        //   Volume dx = mxMake_volume(prhs[MIN_ARGS]);
-        //   Volume dy = mxMake_volume(prhs[MIN_ARGS + 1]);
-        //   Volume dz = mxMake_volume(prhs[MIN_ARGS + 2]);
+        // if gradients are passed through
+        requiredRAM += this->volumeDx.memory_size + 
+                       this->volumeDy.memory_size + 
+                       this->volumeDz.memory_size;
 
-        //   setGradientTextures(
-        //     mmanager_instance->volumeDx, 
-        //     mmanager_instance->volumeDy, 
-        //     mmanager_instance->volumeDz,
-        //     mmanager_instance->ptr_d_volumeDx,
-        //     mmanager_instance->ptr_d_volumeDy,
-        //     mmanager_instance->ptr_d_volumeDz);
-
-        //   // requiredRAM += dx.memory_size + dy.memory_size + dz.memory_size;
-        // }
-
+        return requiredRAM;
         // check if there is enough free VRam
         // if not program will stop with an error msg
         // checkFreeDeviceMemory(requiredRAM);
     }
 
+    /*! \fn void checkFreeDeviceMemory(size_t aRequiredRAMInBytes)
+      * 	\brief checks if there is enough free device memory available
+      *  \param aRequiredRAMInBytes required memory in bytes
+      *
+      * If there is not enough free device memory available the program will be
+      * stopped and an error message will be displayed in the matlab interface. The
+      * user will be informed how much memory he wanted to allocate and how much
+      * 	(free) memory the device offers.
+      */
+    static void checkFreeDeviceMemory(size_t aRequiredRAMInBytes) {
+      size_t totalMemoryInBytes, curAvailMemoryInBytes;
+
+      bool isEnough = false;
+      cudaMemGetInfo(&curAvailMemoryInBytes, &totalMemoryInBytes);
+#ifdef DEBUG
+
+  mexPrintf(
+    "\ttotal memory: %ld MB, free memory: %ld MB, required memory: %ld MB\n",
+    totalMemoryInBytes / (1024 * 1024), curAvailMemoryInBytes / (1024 * 1024),
+    aRequiredRAMInBytes / (1024 * 1024));
+
+#endif
+
+      isEnough = (curAvailMemoryInBytes >= aRequiredRAMInBytes);
+      // cuCtxDetach(context); // Destroy context
+
+      if (!isEnough) {
+          std::ostringstream os;
+          os << "insufficient free VRAM!\n"
+          << "\tTotal Memory (MB): \t" << totalMemoryInBytes / (1024 * 1024)
+          << "\n"
+          << "\tFree Memory (MB): \t" << curAvailMemoryInBytes / (1024 * 1024)
+          << "\n"
+          << "\tRequired memory (MB): \t" << aRequiredRAMInBytes / (1024 * 1024)
+          << "\n";
+
+          mexErrMsgTxt(os.str().c_str());
+      }
+    }
+
     void sync() {
-        // reset cuda memory of gradient volumes, if not set anymore
-        if ((this->volumeDx.last_update == 0 && this->ptr_d_volumeDx != 0) ||
-            (this->volumeDy.last_update == 0 && this->ptr_d_volumeDy != 0) ||
-            (this->volumeDz.last_update == 0 && this->ptr_d_volumeDz != 0)) {
-                freeCudaGradientBuffers(this->ptr_d_volumeDx, this->ptr_d_volumeDy, this->ptr_d_volumeDz);
-            }
+      // reset cuda memory of gradient volumes, if not set anymore
+      if ((this->volumeDx.last_update == 0 && this->ptr_d_volumeDx != 0) ||
+          (this->volumeDy.last_update == 0 && this->ptr_d_volumeDy != 0) ||
+          (this->volumeDz.last_update == 0 && this->ptr_d_volumeDz != 0)) {
+            resetGradients();
+          }
 
-        syncWithDevice(
-            this->volumeEmission, this->volumeAbsorption,
-            this->volumeReflection, this->timeLastMemSync,
-            this->ptr_d_volumeEmission,
-            this->ptr_d_volumeAbsorption,
-            this->ptr_d_volumeReflection);
-        mexPrintf("last sync: %u\n", this->timeLastMemSync);
+      syncWithDevice(
+          this->volumeEmission, this->volumeAbsorption,
+          this->volumeReflection, this->timeLastMemSync,
+          this->ptr_d_volumeEmission,
+          this->ptr_d_volumeAbsorption,
+          this->ptr_d_volumeReflection);
+      mexPrintf("last sync: %u\n", this->timeLastMemSync);
 
-        if (this->volumeDx.last_update != 0 && this->volumeDy.last_update != 0 && 
-            this->volumeDz.last_update != 0) {
-            setGradientTextures(
-                this->volumeDx, this->volumeDy, this->volumeDz,
-                this->ptr_d_volumeDx, this->ptr_d_volumeDy, this->ptr_d_volumeDz,
-                this->timeLastMemSync
-            );
-        }
+      if (this->volumeDx.last_update != 0 && this->volumeDy.last_update != 0 && 
+          this->volumeDz.last_update != 0) {
+          setGradientTextures(
+            this->volumeDx, this->volumeDy, this->volumeDz,
+            this->ptr_d_volumeDx, this->ptr_d_volumeDy, this->ptr_d_volumeDz,
+            this->timeLastMemSync
+          );
+      }
     }
 
     void resetGradients() {
-        if (this->ptr_d_volumeDx == 0 || this->ptr_d_volumeDy == 0 || this->ptr_d_volumeDz == 0)
-            freeCudaGradientBuffers(this->ptr_d_volumeDx, this->ptr_d_volumeDy, this->ptr_d_volumeDz);
+      if (this->ptr_d_volumeDx == 0 || this->ptr_d_volumeDy == 0 || this->ptr_d_volumeDz == 0)
+        freeCudaGradientBuffers(this->ptr_d_volumeDx, this->ptr_d_volumeDy, this->ptr_d_volumeDz);
 
-        volumeDx = make_volume(NULL, 0, make_cudaExtent(0,0,0));
-        volumeDy = make_volume(NULL, 0, make_cudaExtent(0,0,0));
-        volumeDz = make_volume(NULL, 0, make_cudaExtent(0,0,0));
+      volumeDx = make_volume(NULL, 0, make_cudaExtent(0,0,0));
+      volumeDy = make_volume(NULL, 0, make_cudaExtent(0,0,0));
+      volumeDz = make_volume(NULL, 0, make_cudaExtent(0,0,0));
     }
 
     std::string memInfo() {

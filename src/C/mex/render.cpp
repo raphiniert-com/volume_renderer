@@ -37,52 +37,7 @@ float3 make_float3Inv(float *aPointer) {
   return make_float3(aPointer[2], aPointer[1], aPointer[0]);
 }
 
-/*! \fn void checkFreeDeviceMemory(size_t aRequiredRAMInBytes)
- * 	\brief checks if there is enough free device memory available
- *  \param aRequiredRAMInBytes required memory in bytes
- *
- * If there is not enough free device memory available the program will be
- * stopped and an error message will be displayed in the matlab interface. The
- * user will be informed how much memory he wanted to allocate and how much
- * 	(free) memory the device offers.
- */
-void checkFreeDeviceMemory(size_t aRequiredRAMInBytes) {
-  size_t totalMemoryInBytes, curAvailMemoryInBytes;
 
-  bool isEnough = false;
-  // CUcontext context;
-  // CUdevice device;
-
-  // cudaGetDevice(&device);
-  // cuCtxCreate(&context, 0, device); // Create context
-
-  // cuMemGetInfo(&curAvailMemoryInBytes, &totalMemoryInBytes);
-  cudaMemGetInfo(&curAvailMemoryInBytes, &totalMemoryInBytes);
-#ifdef DEBUG
-
-  mexPrintf(
-      "\ttotal memory: %ld MB, free memory: %ld MB, required memory: %ld MB\n",
-      totalMemoryInBytes / (1024 * 1024), curAvailMemoryInBytes / (1024 * 1024),
-      aRequiredRAMInBytes / (1024 * 1024));
-
-#endif
-
-  isEnough = (curAvailMemoryInBytes >= aRequiredRAMInBytes);
-  // cuCtxDetach(context); // Destroy context
-
-  if (!isEnough) {
-    std::ostringstream os;
-    os << "insufficient free VRAM!\n"
-       << "\tTotal Memory (MB): \t" << totalMemoryInBytes / (1024 * 1024)
-       << "\n"
-       << "\tFree Memory (MB): \t" << curAvailMemoryInBytes / (1024 * 1024)
-       << "\n"
-       << "\tRequired memory (MB): \t" << aRequiredRAMInBytes / (1024 * 1024)
-       << "\n";
-
-    mexErrMsgTxt(os.str().c_str());
-  }
-}
 
 #define MIN_ARGS 11
 
@@ -132,6 +87,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     mexPrintf(mmanager_instance->memInfo().c_str());
   }
 
+  // compute the size of data copied to the GPU
+  size_t requiredRAM = mmanager_instance->getRequiredMemory();
+
   // sync_volumes
   if (!strcmp("sync_volumes", cmd)) {
     mmanager_instance->timeLastMemSync = (uint64_t)mxGetScalar(prhs[2]);
@@ -154,6 +112,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     } else if(nrhs == 6) {
       mmanager_instance->resetGradients();
     }
+
+    // compute required RAM
+    requiredRAM += mmanager_instance->getRequiredMemory();
+
+    // check if GPU has enough space
+    mm::MManager::checkFreeDeviceMemory(requiredRAM);
 
     setGradientMethod(tmp);
     mmanager_instance->sync();
@@ -178,9 +142,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
     const mxArray *mxLightSources = prhs[2];
     const mxArray *mxVolumeLight = prhs[3];
-
-    // compute the size of data copied to the GPU
-    size_t requiredRAM(0);
 
     if (!(mxIsClass(mxLightSources, "logical") ||
           mxIsClass(mxVolumeLight, "logical"))) {
@@ -215,16 +176,19 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   #endif
       }
 
+      // compute required RAM
+      requiredRAM += volumeLight.memory_size + 
+                        (numLightSources * sizeof(LightSource));
+
+      // check if GPU has enough space for the LightVolume
+      mm::MManager::checkFreeDeviceMemory(requiredRAM);
+
       // copy to GPU
       copyLightSources(lightSources, numLightSources);
       mmanager_instance->ptr_d_volumeLight = 
         setIlluminationTexture(volumeLight,
           mmanager_instance->ptr_d_volumeLight,
           mmanager_instance->timeLastMemSync);
-
-      // compute required RAM
-      requiredRAM += volumeLight.memory_size + 
-                        (numLightSources * sizeof(LightSource));
     }
 
 
@@ -238,7 +202,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     mexPrintf("Resolution: %dx%d\n", imageResolution[1], imageResolution[0]);
   #endif
 
+    // add the rendered image to the required memory
     requiredRAM += imageResolution[0] * imageResolution[1] * sizeof(VolumeDataType) * 3;
+
+    // check if GPU still has enough free space for the rendered image
+    mm::MManager::checkFreeDeviceMemory(requiredRAM);
 
     // lev, row, col -> x,y,z
     float4x3 rotationMatrix;
