@@ -88,7 +88,7 @@ imshow(rendered_image_main+rendered_image_structure);
 
 render.memInfo();
 
-%% with gradient computation
+%% switch to gradient computation
 render.resetGradientVolumes();
 rendered_image_grad_computed = render.render();
 
