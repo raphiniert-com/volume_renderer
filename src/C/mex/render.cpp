@@ -41,7 +41,7 @@ float3 make_float3Inv(float *aPointer) {
  * 	\brief checks if there is enough free device memory available
  *  \param aRequiredRAMInBytes required memory in bytes
  *
- * 	If there is not enough free device memory available the program will be
+ * If there is not enough free device memory available the program will be
  * stopped and an error message will be displayed in the matlab interface. The
  * user will be informed how much memory he wanted to allocate and how much
  * 	(free) memory the device offers.
@@ -86,10 +86,11 @@ void checkFreeDeviceMemory(size_t aRequiredRAMInBytes) {
 
 #define MIN_ARGS 14
 
-/*! \fn void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray
- * *prhs[] ) \brief connects matlab with the renderer \param nlhs number of
- * left-sided arguments (results) \param plhs pointer that points to the
- * left-sided arguments \param nrhs number of right arguments (parameters)
+/*! \fn void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray prhs[] ) 
+ *  \brief connects matlab with the renderer
+ *  \param nlhs number of left-sided arguments (results)
+ *  \param plhs pointer that points to the left-sided arguments
+ *  \param nrhs number of right arguments (parameters)
  * 	\param prhs pointer that points to the right arguments
  */
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
@@ -154,8 +155,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       mmanager_instance->resetGradients();
     }
 
-    mmanager_instance->sync();
     setGradientMethod(tmp);
+    mmanager_instance->sync();
 
     // Warn if other commands were ignored
     if (nlhs != 0 || nrhs > 9)
@@ -176,7 +177,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       mexErrMsgTxt("insufficient parameter!");
 
     const mxArray *mxLightSources = prhs[2];
-    const mxArray *mxVolumeLight = prhs[6];
+    const mxArray *mxVolumeLight = prhs[3];
 
     // compute the size of data copied to the GPU
     size_t requiredRAM(0);
@@ -218,27 +219,27 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       copyLightSources(lightSources, numLightSources);
       mmanager_instance->ptr_d_volumeLight = 
         setIlluminationTexture(volumeLight,
-        mmanager_instance->ptr_d_volumeLight,
+          mmanager_instance->ptr_d_volumeLight,
           mmanager_instance->timeLastMemSync);
 
-      // compute needed RAM
+      // compute required RAM
       requiredRAM += volumeLight.memory_size + 
                         (numLightSources * sizeof(LightSource));
     }
 
-    // reading all volume data from the matlab class Volume
-    Volume volumeEmission = mxMake_volume(prhs[3]);
-    const Volume volumeReflection = mxMake_volume(prhs[4]);
-    const Volume volumeAbsorption = mxMake_volume(prhs[5]);
+    // // reading all volume data from the matlab class Volume
+    // Volume volumeEmission = mxMake_volume(prhs[3]);
+    // const Volume volumeReflection = mxMake_volume(prhs[4]);
+    // const Volume volumeAbsorption = mxMake_volume(prhs[5]);
 
     // 0: emission
     // 1: reflection
     // 2: absorption
-    const float *scales = reinterpret_cast<float *>(mxGetPr(prhs[7]));
-    const float3 elementSizeUm = make_float3Inv((float *)mxGetPr(prhs[8]));
-    const size_t *imageResolution = reinterpret_cast<size_t *>(mxGetPr(prhs[9]));
-    const float *ptrRotationMatrix = reinterpret_cast<float *>(mxGetPr(prhs[10]));
-    const float *properties = (float *)mxGetPr(prhs[11]);
+    const float *scales = reinterpret_cast<float *>(mxGetPr(prhs[4]));
+    const float3 elementSizeUm = make_float3Inv((float *)mxGetPr(prhs[5]));
+    const size_t *imageResolution = reinterpret_cast<size_t *>(mxGetPr(prhs[6]));
+    const float *ptrRotationMatrix = reinterpret_cast<float *>(mxGetPr(prhs[7]));
+    const float *properties = (float *)mxGetPr(prhs[8]);
 
   #ifdef DEBUG
     mexPrintf("Resolution: %dx%d\n", imageResolution[1], imageResolution[0]);
@@ -270,55 +271,18 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
               rotationMatrix.m[2].z);
   #endif
 
-    const float opacityThreshold = (float)mxGetScalar(prhs[12]);
+    const float opacityThreshold = (float)mxGetScalar(prhs[9]);
 
     dim3 block_size = dim3(16, 16);
     dim3 grid_size = dim3(vr::iDivUp(imageResolution[1], block_size.x),
                           vr::iDivUp(imageResolution[0], block_size.y));
 
-    const float3 color = make_float3((float *)mxGetPr(prhs[13]));
+    const float3 color = make_float3((float *)mxGetPr(prhs[10]));
 
     RenderOptions options =
         initRender(imageResolution[1], imageResolution[0], scales[0], scales[1],
                   scales[2], elementSizeUm, rotationMatrix, opacityThreshold,
-                  volumeEmission.extent);
-    
-    // compute required ram
-    // emission is required in anycase
-    requiredRAM += volumeEmission.memory_size;
-
-    // check if absorption is unique
-    if (volumeEmission != volumeAbsorption &&
-        volumeReflection != volumeAbsorption) {
-      requiredRAM += volumeAbsorption.memory_size;
-    }
-
-    // check if reflection is unique
-    if (volumeEmission != volumeReflection &&
-        volumeReflection != volumeAbsorption) {
-      requiredRAM += volumeReflection.memory_size;
-    }
-
-    // // if gradients are passed through
-    // if (nrhs == MIN_ARGS + 3) {
-    //   Volume dx = mxMake_volume(prhs[MIN_ARGS]);
-    //   Volume dy = mxMake_volume(prhs[MIN_ARGS + 1]);
-    //   Volume dz = mxMake_volume(prhs[MIN_ARGS + 2]);
-
-    //   setGradientTextures(
-    //     mmanager_instance->volumeDx, 
-    //     mmanager_instance->volumeDy, 
-    //     mmanager_instance->volumeDz,
-    //     mmanager_instance->ptr_d_volumeDx,
-    //     mmanager_instance->ptr_d_volumeDy,
-    //     mmanager_instance->ptr_d_volumeDz);
-
-    //   // requiredRAM += dx.memory_size + dy.memory_size + dz.memory_size;
-    // }
-
-    // check if there is enough free VRam
-    // if not program will stop with an error msg
-    // checkFreeDeviceMemory(requiredRAM);
+                  mmanager_instance->volumeEmission.extent);
 
     // switch
     mwSize dim[3] = {imageResolution[0], imageResolution[1], 3};
@@ -332,7 +296,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     mexPrintf("opacity: %f\n", options.opacity_threshold);
 #endif
 
-    float *result = render(block_size, grid_size, options, volumeEmission.extent, color);
+    float *result = render(block_size, grid_size, options, mmanager_instance->volumeEmission.extent, color);
 
     mxArray *resultArray = mxCreateNumericArray(3, dim, mxSINGLE_CLASS, mxREAL);
 
