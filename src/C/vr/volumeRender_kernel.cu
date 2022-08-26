@@ -66,23 +66,6 @@ vr::LightSource *d_lightSources = NULL;
  */
 __device__ __constant__ size_t c_numLightSources;
 
-
-/*! \var cudaArray *d_gradientXArray
- * 	\brief device array of the gradient volume data in x direction
- */
-cudaArray *d_gradientXArray = 0;
-
-/*! \var cudaArray *d_gradientYArray
- * 	\brief device array of the gradient volume data in y direction
- */
-cudaArray *d_gradientYArray = 0;
-
-/*! \var cudaArray *d_gradientZArray
- * 	\brief device array of the gradient volume data in z direction
- */
-cudaArray *d_gradientZArray = 0;
-
-
 /*! \var const cudaChannelFormatDesc channelDesc
  * 	\brief channel desc for textures
  */
@@ -525,9 +508,9 @@ namespace vr {
  */
 cudaArray * createTextureFromVolume(
     texture<VolumeDataType, cudaTextureType3D, cudaReadModeElementType> &aTex,
-    const Volume &aVolume, cudaArray *d_aArray, const uint64_t aTimeLastMemSync) {
+    const Volume &aVolume, cudaArray *d_aArray, const bool allocateMemory) {
   // if volume was refreshed or first render
-  bool allocateMemory = (aVolume.last_update > aTimeLastMemSync) || (aTimeLastMemSync == 0);
+  // bool allocateMemory = (aVolume.last_update > aTimeLastMemSync) || (aTimeLastMemSync == 0);
 
   // only allocate memory and copy data to GPU if required
   if (d_aArray == 0 || allocateMemory) {
@@ -654,16 +637,18 @@ cudaArray * setupTexture(
  */
 cudaArray * syncVolume(
     texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType>& aTexture,
-    cudaArray* &d_aArray, const Volume& aVolume, bool& aUpdated, const uint64_t aTimeLastMemSync) {
+    cudaArray* &d_aArray, const Volume& aVolume, const bool aAllocateMemory, bool aFreeMemory=true) {
   // clear memory
-  if (d_aArray != 0) {
+  if (d_aArray != 0 || aAllocateMemory) {
     HANDLE_ERROR(cudaUnbindTexture(aTexture));
+  }
+
+  if (d_aArray != 0 || aFreeMemory) {
     HANDLE_ERROR(cudaFreeArray(d_aArray));
     d_aArray = 0;
   }
 
-  d_aArray = createTextureFromVolume(aTexture, aVolume, d_aArray, aTimeLastMemSync);
-  aUpdated = true;
+  d_aArray = createTextureFromVolume(aTexture, aVolume, d_aArray, aAllocateMemory);
 
   return d_aArray;
 }
@@ -674,8 +659,10 @@ cudaArray * syncVolume(
  */
 cudaArray * setIlluminationTexture(const Volume &aVolume, cudaArray * d_aIllumination, 
   const uint64_t aTimeLastMemSync) {
-    
-  return createTextureFromVolume(tex_illumination, aVolume, d_aIllumination, aTimeLastMemSync);
+
+  bool allocateMemory = (aVolume.last_update > aTimeLastMemSync) || (aTimeLastMemSync == 0);
+  
+  return syncVolume(tex_illumination, d_aIllumination, aVolume, allocateMemory);
 }
 
 /*! \fn cudaArray* setGradientTextures(const Volume& aDx, const Volume& aDy, const Volume& aDz) 
@@ -690,12 +677,14 @@ void setGradientTextures(const Volume &aDx,
                          cudaArray * &ptr_d_volumeDx,
                          cudaArray * &ptr_d_volumeDy,
                          cudaArray * &ptr_d_volumeDz,
-                        const uint64_t aTimeLastMemSync ) {
-  
+                        const uint64_t aTimeLastMemSync) {
+  bool allocateMemoryDx = (aDx.last_update > aTimeLastMemSync) || (aTimeLastMemSync == 0);
+  bool allocateMemoryDy = (aDy.last_update > aTimeLastMemSync) || (aTimeLastMemSync == 0);
+  bool allocateMemoryDz = (aDz.last_update > aTimeLastMemSync) || (aTimeLastMemSync == 0);
 
-  ptr_d_volumeDx = createTextureFromVolume(tex_gradientX, aDx, ptr_d_volumeDx, aTimeLastMemSync);
-  ptr_d_volumeDy = createTextureFromVolume(tex_gradientY, aDy, ptr_d_volumeDy, aTimeLastMemSync);
-  ptr_d_volumeDz = createTextureFromVolume(tex_gradientZ, aDz, ptr_d_volumeDz, aTimeLastMemSync);
+  ptr_d_volumeDx = syncVolume(tex_gradientX, ptr_d_volumeDx, aDx, allocateMemoryDx);
+  ptr_d_volumeDy = syncVolume(tex_gradientY, ptr_d_volumeDy, aDy, allocateMemoryDy);
+  ptr_d_volumeDz = syncVolume(tex_gradientZ, ptr_d_volumeDz, aDz, allocateMemoryDz);
 
   // assign gradient_function
   vr::GradientMethod tmp = gradientLookup;
@@ -730,6 +719,11 @@ void syncWithDevice(const Volume &aVolumeEmission, const Volume &aVolumeAbsorpti
   const bool reqUpdateAb = (aVolumeAbsorption.last_update > aTimeLastMemSync) || (aTimeLastMemSync == 0);
   const bool reqUpdateRe = (aVolumeReflection.last_update > aTimeLastMemSync) || (aTimeLastMemSync == 0);
 
+  bool freeEm = false;
+  bool freeAb = false;
+  bool freeRe = false;
+
+
   // save status
   bool updatedEm = false;
   bool updatedAb = false;
@@ -744,7 +738,10 @@ void syncWithDevice(const Volume &aVolumeEmission, const Volume &aVolumeAbsorpti
   // conditionally update GPU memory and textures in order to save bandwidth
   if (reqUpdateEm) {
     if (!updatedEm) {
-      d_aVolumeEmission = syncVolume(tex_emission, d_aVolumeEmission, aVolumeEmission, updatedEm, aTimeLastMemSync);
+      // cudaArray * syncVolume(    texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType>& aTexture,    cudaArray* &d_aArray, const Volume& aVolume, const bool aAllocateMemory, bool aFreeMemory=true) {
+
+      d_aVolumeEmission = syncVolume(tex_emission, d_aVolumeEmission, aVolumeEmission, updatedEm, freeEm);
+      updatedEm = true;
     }
 
     if (simEmRe && !updatedRe) {
@@ -771,7 +768,8 @@ void syncWithDevice(const Volume &aVolumeEmission, const Volume &aVolumeAbsorpti
   if (reqUpdateAb) {
     if (!updatedAb) {
       d_aVolumeAbsorption =
-          syncVolume(tex_absorption, d_aVolumeAbsorption, aVolumeAbsorption, updatedAb, aTimeLastMemSync);
+          syncVolume(tex_absorption, d_aVolumeAbsorption, aVolumeAbsorption, updatedAb, freeAb);
+      updatedAb = true;
 
 #ifdef DEBUG
   mexPrintf("Synced Volume Absorption\n");
@@ -804,7 +802,8 @@ void syncWithDevice(const Volume &aVolumeEmission, const Volume &aVolumeAbsorpti
   if (reqUpdateRe) {
     if (!updatedRe) {
       d_aVolumeReflection = 
-          syncVolume(tex_reflection, d_aVolumeReflection, aVolumeReflection, updatedRe, aTimeLastMemSync);
+          syncVolume(tex_reflection, d_aVolumeReflection, aVolumeReflection, reqUpdateRe, freeRe);
+      updatedRe = true;
 
 #ifdef DEBUG
   mexPrintf("Synced Volume Reflection\n");

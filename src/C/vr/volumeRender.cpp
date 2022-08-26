@@ -223,8 +223,7 @@ inline int cutGetMaxGflopsDeviceId() {
 /*! \fn render(const dim3 &block_size, const dim3 &grid_size,
                const RenderOptions &aOptions, const MManager *mmanagerInstance,
                const float3 &aColor)
- * 	\brief computes some properties and selects device on that the render
- computes
+ * 	\brief computes some properties and selects device on that the render computes
  *  \param block_size CUDA block size
  * 	\param grid_size CUDA grid size
  *  \param aOptions Options of the rendering process
@@ -235,7 +234,6 @@ inline int cutGetMaxGflopsDeviceId() {
 float *render(const dim3 &block_size, const dim3 &grid_size,
               const RenderOptions &aOptions, const cudaExtent &aVolumeExtent,
               const float3 &aColor) {
-  // initCuda(aVolumeEmission, aVolumeAbsorption, aVolumeReflection);
 
 #ifdef DEBUG
   printf("rendering scene..\n");

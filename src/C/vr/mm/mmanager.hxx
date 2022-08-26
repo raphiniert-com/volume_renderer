@@ -34,11 +34,51 @@ public:
     
     cudaArray * ptr_d_volumeLight = 0;
 
+    // think about memory swapping mechanism here: if v_em_old == v_em_new, and some other stuff is equivalent, just swap here without new assignment.
 
     // member functions
     MManager() {}
     ~MManager() {
         cudaDeviceReset();
+    }
+
+    bool checkFreeGpuMemory() {
+        // // compute required ram
+        // // emission is required in anycase
+        // requiredRAM += mmanager_instance->volumeEmission.memory_size;
+
+        // // check if absorption is unique
+        // if (volumeEmission != volumeAbsorption &&
+        //     volumeReflection != volumeAbsorption) {
+        //   requiredRAM += mmanager_instance->volumeAbsorption.memory_size;
+        // }
+
+        // // check if reflection is unique
+        // if (volumeEmission != volumeReflection &&
+        //     volumeReflection != volumeAbsorption) {
+        //   requiredRAM += volumeReflection.memory_size;
+        // }
+
+        // // if gradients are passed through
+        // if (nrhs == MIN_ARGS + 3) {
+        //   Volume dx = mxMake_volume(prhs[MIN_ARGS]);
+        //   Volume dy = mxMake_volume(prhs[MIN_ARGS + 1]);
+        //   Volume dz = mxMake_volume(prhs[MIN_ARGS + 2]);
+
+        //   setGradientTextures(
+        //     mmanager_instance->volumeDx, 
+        //     mmanager_instance->volumeDy, 
+        //     mmanager_instance->volumeDz,
+        //     mmanager_instance->ptr_d_volumeDx,
+        //     mmanager_instance->ptr_d_volumeDy,
+        //     mmanager_instance->ptr_d_volumeDz);
+
+        //   // requiredRAM += dx.memory_size + dy.memory_size + dz.memory_size;
+        // }
+
+        // check if there is enough free VRam
+        // if not program will stop with an error msg
+        // checkFreeDeviceMemory(requiredRAM);
     }
 
     void sync() {
@@ -49,7 +89,8 @@ public:
                 freeCudaGradientBuffers(this->ptr_d_volumeDx, this->ptr_d_volumeDy, this->ptr_d_volumeDz);
             }
 
-        syncWithDevice(this->volumeEmission, this->volumeAbsorption,
+        syncWithDevice(
+            this->volumeEmission, this->volumeAbsorption,
             this->volumeReflection, this->timeLastMemSync,
             this->ptr_d_volumeEmission,
             this->ptr_d_volumeAbsorption,

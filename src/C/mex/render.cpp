@@ -187,7 +187,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       // get size num lights
       const size_t numLightSources = mxGetN(mxLightSources);
       const Volume volumeLight = mxMake_volume(mxVolumeLight);
-      mmanager_instance->volumeLight = mxMake_volume(mxVolumeLight);
+        mmanager_instance->volumeLight = mxMake_volume(mxVolumeLight);
 
   #ifdef DEBUG
       mexPrintf("Setting up %d Lightsources\n", numLightSources);
@@ -227,14 +227,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
                         (numLightSources * sizeof(LightSource));
     }
 
-    // // reading all volume data from the matlab class Volume
-    // Volume volumeEmission = mxMake_volume(prhs[3]);
-    // const Volume volumeReflection = mxMake_volume(prhs[4]);
-    // const Volume volumeAbsorption = mxMake_volume(prhs[5]);
 
-    // 0: emission
-    // 1: reflection
-    // 2: absorption
     const float *scales = reinterpret_cast<float *>(mxGetPr(prhs[4]));
     const float3 elementSizeUm = make_float3Inv((float *)mxGetPr(prhs[5]));
     const size_t *imageResolution = reinterpret_cast<size_t *>(mxGetPr(prhs[6]));
