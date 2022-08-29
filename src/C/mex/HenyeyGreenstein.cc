@@ -1,7 +1,7 @@
 /*! \file HenyeyGreenstein.cc
  * 	\author Raphael Scheible <mail@raphiniert.com>
  * 	\version 1.0
- *  mail@raphiniert.com
+ *  \license This project is released under the GNU Affero General Public License, Version 3
  *
  * 	\brief matlab command to generate a LUT with Henyey-Greenstein phase function
  *
