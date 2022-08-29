@@ -635,13 +635,10 @@ cudaArray * setupTexture(
  */
 cudaArray * syncVolume(
     texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType>& aTexture,
-    cudaArray* &d_aArray, const Volume& aVolume, const bool aAllocateMemory, bool aFreeMemory=true) {
+    cudaArray* &d_aArray, const Volume& aVolume, const bool aAllocateMemory) {
   // clear memory
   if (d_aArray != 0 || aAllocateMemory) {
     HANDLE_ERROR(cudaUnbindTexture(aTexture));
-  }
-
-  if (d_aArray != 0 || aFreeMemory) {
     HANDLE_ERROR(cudaFreeArray(d_aArray));
     d_aArray = 0;
   }
@@ -731,8 +728,6 @@ void syncWithDevice(const Volume &aVolumeEmission, const Volume &aVolumeAbsorpti
   // conditionally update GPU memory and textures in order to save bandwidth
   if (reqUpdateEm) {
     if (!updatedEm) {
-      // cudaArray * syncVolume(    texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType>& aTexture,    cudaArray* &d_aArray, const Volume& aVolume, const bool aAllocateMemory, bool aFreeMemory=true) {
-
       d_aVolumeEmission = syncVolume(tex_emission, d_aVolumeEmission, aVolumeEmission, updatedEm);
       updatedEm = true;
     }
