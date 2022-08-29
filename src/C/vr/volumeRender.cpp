@@ -301,8 +301,8 @@ float *render(const dim3 &block_size, const dim3 &grid_size,
 }
 
 /*! \fn Volume mxMake_volume(const mxArray* prhs)
- * 	\brief constructing a Volume structure
- *  \param prhs pointer to the matlab volume
+ * 	\brief constructing a Volume structure from matlab volume
+ *  \param mxVolume pointer to the matlab volume
  *  \return structure of type Volume
  */
 Volume mxMake_volume(const mxArray *mxVolume) {

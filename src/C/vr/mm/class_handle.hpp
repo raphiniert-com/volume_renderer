@@ -33,6 +33,9 @@
 #include <cstring>
 #include <typeinfo>
 
+
+namespace vr {
+namespace mm {
 #define CLASS_HANDLE_SIGNATURE 0xFF00F0A5
 template<class base> class class_handle
 {
@@ -76,5 +79,6 @@ template<class base> inline void destroyObject(const mxArray *in)
     delete convertMat2HandlePtr<base>(in);
     mexUnlock();
 }
-
+}
+}
 #endif  * __CLASS_HANDLE_HPP__
