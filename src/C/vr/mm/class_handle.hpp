@@ -36,7 +36,9 @@
 
 namespace vr {
 namespace mm {
+    
 #define CLASS_HANDLE_SIGNATURE 0xFF00F0A5
+
 template<class base> class class_handle
 {
 public:

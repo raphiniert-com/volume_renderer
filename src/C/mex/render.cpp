@@ -61,7 +61,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     if (nlhs != 1)
         mexErrMsgTxt("New: One output expected.");
     // Return a handle to a new C++ instance
-    plhs[0] = convertPtr2Mat<mm::MManager>(new mm::MManager);
+    plhs[0] = mm::convertPtr2Mat<mm::MManager>(new mm::MManager);
     return;
   }
 
@@ -72,7 +72,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   // Delete
   if (!strcmp("delete", cmd)) {
       // Destroy the C++ object
-      destroyObject<mm::MManager>(prhs[1]);
+      mm::destroyObject<mm::MManager>(prhs[1]);
       // Warn if other commands were ignored
       if (nlhs != 0 || nrhs != 2)
           mexWarnMsgTxt("Delete: Unexpected arguments ignored.");
@@ -80,7 +80,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   }
 
   // Get the class instance pointer from the second input
-  mm::MManager* mmanager_instance = convertMat2Ptr<mm::MManager>(prhs[1]);
+  mm::MManager* mmanager_instance = mm::convertMat2Ptr<mm::MManager>(prhs[1]);
 
   // mem_info
   if (!strcmp("mem_info", cmd)) {
