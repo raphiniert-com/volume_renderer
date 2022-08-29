@@ -72,10 +72,4 @@ rendered_image_main = render.render();
 
 %% display the images and the combined one
 figure;
-imshow(rendered_image_main);
-figure;
-imshow(rendered_image_structure);
-figure;
 imshow(rendered_image_main+rendered_image_structure);
-figure;
-imshow(render.render());

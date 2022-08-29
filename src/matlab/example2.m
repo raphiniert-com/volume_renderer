@@ -44,7 +44,7 @@ render.ScaleEmission=10;
 render.Color = [1,1,1];
 
 
-nStep=5;
+nStep=30;
 rendered_image = zeros([size(emission_main.Data,2), ...
                         size(emission_main.Data,1), ...
                         3, 360/nStep]);
