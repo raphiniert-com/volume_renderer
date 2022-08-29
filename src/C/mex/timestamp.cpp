@@ -1,5 +1,5 @@
-/*! \file render.cpp
- * 	\author Raphael Scheible <raphael.scheible@uniklinik-freiburg.de>
+/*! \file timestamp.cpp
+ * 	\author Raphael Scheible <mail@raphiniert.com>
  * 	\version 1.0
  * 	\license This project is released under the GNU Affero General Public License, Version 3 
  *

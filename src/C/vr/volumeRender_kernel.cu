@@ -1,10 +1,9 @@
 /*! \file volumeRender_kernel.cu
- * 	\author Raphael Scheible <raphael.scheible@uniklinik-freiburg.de>
+ * 	\author Raphael Scheible <mail@raphiniert.com>
  * 	\version 1.0
  * 	\license This project is released under the GNU Affero General Public License, Version 3
  *
  * 	\brief CUDA C file with all the device functions
- *
  */
 
 #ifndef _VOLUMERENDER_KERNEL_CU_

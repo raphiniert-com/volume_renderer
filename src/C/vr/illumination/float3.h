@@ -1,12 +1,9 @@
 /*! \file float3.h
- * 	\author Raphael Scheible <raphael.scheible@uniklinik-freiburg.de>
+ * 	\author Raphael Scheible <mail@raphiniert.com>
  * 	\version 1.0
- *  \license This project is released under the GNU Affero General Public
- * License, Version 3
+ *  \license This project is released under the GNU Affero General Public License, Version 3
  *
- * 	\brief implementation of float3 struct intended for the computation of
- * illumination models
- *
+ * 	\brief implementation of float3 struct intended for the computation of illumination models
  */
 
 #include <math.h>

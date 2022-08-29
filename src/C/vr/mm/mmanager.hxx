@@ -1,3 +1,11 @@
+/*! \file mmanager.hxx
+ * 	\author Raphael Scheible <mail@raphiniert.com>
+ * 	\version 1.0
+ * 	\license This project is released under the GNU Affero General Public License, Version 3
+ *
+ * 	\brief memory manager for preventing unrequired host to device transactions
+ */
+
 #ifndef __MMANAGER_HXX__
 #define __MMANAGER_HXX__
 #include <vr/volumeRender.h>

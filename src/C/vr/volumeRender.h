@@ -1,10 +1,9 @@
 /*! \file volumeRender.h
- * 	\author Raphael Scheible <raphael.scheible@uniklinik-freiburg.de>
+ * 	\author Raphael Scheible <mail@raphiniert.com>
  * 	\version 1.0
  * 	\license This project is released under the GNU Affero General Public License, Version 3
  *
  * 	\brief header file of all the functions of the volume renderer
- *
  */
 
 #include <assert.h>
