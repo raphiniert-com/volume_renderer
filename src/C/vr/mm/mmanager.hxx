@@ -218,7 +218,7 @@ public:
         std::ostringstream os;
         os  << "Memory Information\n"
             << "------------------------------"
-            << "last sync (timestamp): ", this->timeLastMemSync
+            << "last sync (timestamp): " << this->timeLastMemSync
             << "\n"
             << "\n"
             << "\tGPU"
