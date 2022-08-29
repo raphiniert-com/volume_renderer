@@ -11,7 +11,7 @@ _Volume Renderer <small>for use with MATLAB®</small>_ extends MATLAB® by a GPU
 
 ## Requirements
 * CUDA® capable NVIDIA® graphics device with at least [Kepler™](https://en.wikipedia.org/wiki/Kepler_(microarchitecture)) architecture
-* Linux computer (64 bit) with installed NVIDIA® driver and CUDA® 11
+* Linux or Windows computer (64 bit) with installed NVIDIA® driver and CUDA® 11
 * MATLAB® <sup id="a1">[1](#f1)</sup> with
   * [Image Processing Toolbox](https://www.mathworks.com/products/image.html)
   * [Parallel Computing Tookbox](https://mathworks.com/products/parallel-computing.html) for compilation (requires [mexcuda](https://de.mathworks.com/help/parallel-computing/mexcuda.html))
@@ -43,7 +43,7 @@ They all are built upon one dataset from [1]. In order to run the examples menti
 
 ## License
 - This work is licensed under [GNU Affero General Public License version 3](https://opensource.org/licenses/AGPL-3.0). 
-- Copyright 2020 © [Raphael Scheible](raphiniert.com)
+- Copyright 2020-present © [Raphael Scheible](https://raphiniert.com)
 
 ## Acknowledgments
 _Volume Renderer for use with MATLAB®_ was originally developed as a student project by Raphael Scheible at University of Freiburg supervised by [Benjamin Ummenhofer](http://lmb.informatik.uni-freiburg.de/people/ummenhof/) and [apl. Prof. Dr. Olaf Ronneberger](http://lmb.informatik.uni-freiburg.de/people/ronneber/).
