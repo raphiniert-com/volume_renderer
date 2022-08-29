@@ -18,8 +18,11 @@ _Volume Renderer <small>for use with MATLAB®</small>_ extends MATLAB® by a GPU
 
 
 ## Installation
-First download and extract or clone the repository. Next, download and install [CUDA 11](https://developer.nvidia.com/cuda-downloads).
-Next, enter the local folder with the render code in matlab. Adjust the CUDA path in `src/make.m` and run it from within `src`. This command will compile all mex-files for the renderer.
+First download and extract or clone the repository. Next, download and install the following tools:
+- [CUDA 11](https://developer.nvidia.com/cuda-downloads)
+- [Setup some C compiler](https://de.mathworks.com/support/requirements/supported-compilers.html)
+
+Next, open matlab and navigate to the folder with the render code in matlab. Adjust the CUDA path in `src/make.m` and run it from within `src`. This command will compile all mex-files for the renderer.
 Either, enter `src/matlab` to run code and place your matlab renderer code there, or setup matlab to load this folder at each startup into its search path as described [here](https://de.mathworks.com/help/matlab/matlab_env/add-folders-to-matlab-search-path-at-startup.html) (recommended).
 
 
