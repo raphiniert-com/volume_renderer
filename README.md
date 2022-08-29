@@ -11,23 +11,35 @@ _Volume Renderer <small>for use with MATLAB®</small>_ extends MATLAB® by a GPU
 
 ## Requirements
 * CUDA® capable NVIDIA® graphics device with at least [Kepler™](https://en.wikipedia.org/wiki/Kepler_(microarchitecture)) architecture
-* Linux computer (64 bit) with installed NVIDIA® driver and CUDA®
+* Linux computer (64 bit) with installed NVIDIA® driver and CUDA® 11
 * MATLAB® <sup id="a1">[1](#f1)</sup> with
   * [Image Processing Toolbox](https://www.mathworks.com/products/image.html)
   * [Parallel Computing Tookbox](https://mathworks.com/products/parallel-computing.html) for compilation (requires [mexcuda](https://de.mathworks.com/help/parallel-computing/mexcuda.html))
 
 
 ## Installation
-First download and extract or clone the repository.
-Next, enter the local folder with the render code in matlab. Run the `make.m` file inside `src`. This command will compile all mex-files for the renderer.
-Either, enter `src/matlab` to run code and place your matlab renderer code there, or setup matlab to load this folder at each startup into its search path as described [here](https://de.mathworks.com/help/matlab/matlab_env/add-folders-to-matlab-search-path-at-startup.html) (recommended by us).
+First download and extract or clone the repository. Next, download and install [CUDA 11](https://developer.nvidia.com/cuda-downloads).
+Next, enter the local folder with the render code in matlab. Adjust the CUDA path in `src/make.m` and run it from within `src`. This command will compile all mex-files for the renderer.
+Either, enter `src/matlab` to run code and place your matlab renderer code there, or setup matlab to load this folder at each startup into its search path as described [here](https://de.mathworks.com/help/matlab/matlab_env/add-folders-to-matlab-search-path-at-startup.html) (recommended).
 
+
+## Documentation
+In order to generate a [doxygen documentation](https://doxygen.nl) in html, we offer a `Doxyfile`. Install the tool and run `doxygen Doxyfile`.
+The resulting Documentation will be stored in `docs/doxygen`.
 
 ## Example
 The following video demonstrates the power of the renderer<sup id="a2">[2](#f2)</sup>:
 
 ![Demo CountPages alpha](docs/example_vr_zebra.gif)
 
+### Example Code
+In `src/matlab` are four examples:
+  - `example1.m`: creating a 2D image of a zebrafish embrio dataset
+  - `example1_grad.m`: same as above, but using precomputed gradient volumes instead of on the fly gradient computation
+  - `example2.m`: create a video of the zebrafish embrio
+  - `example3.m`: same as example 2, but using two channels
+
+They all are built upon one dataset from [1]. In order to run the examples mentioned above, one needs to create the dir `h5-data/` and put `ViBE-Z_72hpf_v1.h5` into it.
 
 ## License
 - This work is licensed under [GNU Affero General Public License version 3](https://opensource.org/licenses/AGPL-3.0). 
