@@ -71,8 +71,19 @@ __device__ __constant__ size_t c_numLightSources;
  */
 const cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<vr::VolumeDataType>();
 
+/*! \var __device__ vr::VolumeType d_idxEmmission
+ * 	\brief id for the emission texture
+ */
 __device__ vr::VolumeType d_idxEmmission = vr::VolumeType::emission;
+
+/*! \var __device__ vr::VolumeType d_idxAbsorption
+ * 	\brief id for the absorption texture
+ */
 __device__ vr::VolumeType d_idxAbsorption = vr::VolumeType::emission;
+
+/*! \var __device__ vr::VolumeType d_idxReflection
+ * 	\brief id for the reflection texture
+ */
 __device__ vr::VolumeType d_idxReflection = vr::VolumeType::reflection;
 
 /*! \var texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType> tex_emission 
@@ -110,6 +121,11 @@ texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType> tex_refl
  */
 texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType> tex_illumination;
 
+/*! \var __device__ texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType> getTexture(vr::VolumeType aType)
+ *  \brief 3D texture for illumination lookup
+ *  \param aType volume type id from type vr::VolumeType
+ *  \return texture given an id
+ */
 __device__ texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType> getTexture(vr::VolumeType aType) {
   switch (aType) {
     case vr::VolumeType::emission:
@@ -289,6 +305,7 @@ __forceinline__ __device__ float angle(const float3 &a, const float3 &b) {
  * 	\param aBoxmin min extents of the intersection box
  * 	\param aBoxmin max extents of the intersection box
  * 	\param aBoxScale 1 devided by size of the box
+ *  \return voxel value
  */
 __device__ float3 shade(const float3 &aSamplePosition, const float3 aPosition,
                         const float3 aGradientStep, const float3 aViewPosition,
@@ -495,23 +512,24 @@ __global__ void d_render(float *d_aOutput, const vr::RenderOptions aOptions,
 
 namespace vr {
 
-/*! \fn void createTextureFromVolume(texture<VolumeDataType,
- *      cudaTextureType3D, cudaReadModeElementType>& aTex, const Volume& aVolume,
- * 			cudaArray* d_aArray, const bool aNormalized=true)
- *  \brief copies Volume from host to device
+/*! \fn cudaArray * createTextureFromVolume(
+                    texture<VolumeDataType, cudaTextureType3D, cudaReadModeElementType> &aTex,
+                    const Volume &aVolume, cudaArray *d_aArray, const bool aAllocateMemory) 
+ *  \brief creates a texture based on a Volume
  *  \param aTex texture that is used to perform lookups
  *  \param aVolume volume that is copied to the device
  * 	\param d_aArray device array where the data are stored in/copied to
+ *  \param aAllocateMemory if set to true, memory will be allocated and data copied from host to device
  * 	\return device pointer of the device array
  */
 cudaArray * createTextureFromVolume(
     texture<VolumeDataType, cudaTextureType3D, cudaReadModeElementType> &aTex,
-    const Volume &aVolume, cudaArray *d_aArray, const bool allocateMemory) {
+    const Volume &aVolume, cudaArray *d_aArray, const bool aAllocateMemory) {
   // if volume was refreshed or first render
   // bool allocateMemory = (aVolume.last_update > aTimeLastMemSync) || (aTimeLastMemSync == 0);
 
   // only allocate memory and copy data to GPU if required
-  if (d_aArray == 0 || allocateMemory) {
+  if (d_aArray == 0 || aAllocateMemory) {
     HANDLE_ERROR(cudaMalloc3DArray(&d_aArray, &channelDesc, aVolume.extent));
 
     // copy data to 3D d_array
@@ -538,8 +556,15 @@ cudaArray * createTextureFromVolume(
   return d_aArray;
 }
 
-/*! \fn void freeCudaGradientBuffers()
- *  \brief removes the gradients from the device memory
+/*! \fn void freeCudaGradientBuffers(
+              cudaArray * d_aGradientXArray,
+              cudaArray * d_aGradientYArray,
+              cudaArray * d_aGradientZArray
+            )
+ *  \param d_aGradientXArray device memory address to the x-gradient
+ *  \param d_aGradientYArray device memory address to the y-gradient
+ *  \param d_aGradientZArray device memory address to the z-gradient
+ *  \brief removes the gradient volumes from the device memory
  */
 void freeCudaGradientBuffers(
   cudaArray * d_aGradientXArray,
@@ -569,7 +594,8 @@ void render_kernel(float *d_aOutput, const dim3 &block_size,
                                       d_lightSources, aGradientStep);
 }
 
-/*! \fn void copyLightSources(const LightSource *aLightSources, const size_t aNumOfLightSources)
+/*! \fn void copyLightSources(const LightSource *aLightSources,
+                      const size_t aNumOfLightSources)
  *  \brief copy light sources to device
  * 	\param aLightSources pointer to all light sources
  * 	\param aNumOfLightSources number of light sources
@@ -595,28 +621,28 @@ void setGradientMethod(const vr::GradientMethod aMethod) {
   );
 }
 
-/*! \fn void syncTexture(const textureReference& aTexture, const cudaArray* d_array, 
-                         const cudaArray* d_arrayRef, bool& aUpdated)
- *  \brief sync texture
- * 	\param d_array 
- *  \param d_arrayRef 
- * 	\param aTexture 
- * 	\param aUpdated 
+/*! \fn cudaArray * referenceTexture(
+            texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType>& aTexture, 
+            cudaArray* d_aArray, const vr::VolumeType& d_aIdx, const vr::VolumeType aTypeAssigned)
+ *  \brief reference a texture, using the mechanism undelying getTexture
+ *  \param aTexture texture which should be re-referenced
+ * 	\param d_aArray array pointing to the device memory undelying the texture
+ *  \param d_aIdx volume type id the texture has
+ * 	\param aTypeAssigned the volume type id the texture should refer to
+ *  \return device address of texture
  */
-cudaArray * setupTexture(
+cudaArray * referenceTexture(
     texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType>& aTexture, 
-    cudaArray* d_aArray, vr::VolumeType& d_aIdx, vr::VolumeType aTypeAssigned, bool& aUpdated) {
+    cudaArray* d_aArray, const vr::VolumeType& d_aIdx, const vr::VolumeType aTypeAssigned) {
   
   // clear memory
   if (d_aArray != 0) {
-    // HANDLE_ERROR(cudaUnbindTexture(aTexture));
-    // HANDLE_ERROR(cudaFreeArray(d_aArray));
+    HANDLE_ERROR(cudaUnbindTexture(aTexture));
     d_aArray = 0;
   }
   
   // just reference to the same device variable
   // HANDLE_ERROR(cudaBindTextureToArray(aTexture, d_aArrayRef, channelDesc));
-  aUpdated = true;
   HANDLE_ERROR(
     cudaMemcpyToSymbol(d_aIdx, &aTypeAssigned, sizeof(enum vr::VolumeType))
   );
@@ -624,18 +650,18 @@ cudaArray * setupTexture(
   return d_aArray;
 }
 
-/*! \fn void syncVolume(cudaArray* d_array, const Volume& aVolume, 
-                               const textureReference& aTexture, bool& aUpdated)
- *  \brief sync texture
- * 	\param d_array 
- * 	\param aVolume 
- * 	\param aTexture 
- * 	\param aUpdated 
- *  \param aTimeLastMemSync
+/*! \fn cudaArray * syncVolume(
+          texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType>& aTexture,
+          cudaArray* &d_aArray, const Volume& aVolume, const bool aAllocateMemory)
+ *  \brief sync volume with device (if required) and setup texture
+ * 	\param aTexture texture which should be synced
+ * 	\param d_aArray array pointing to the device memory undelying the texture
+ * 	\param aVolume volume data which should be synched onto the device
+ *  \param aAllocateMemory if set to true, memory will be allocated and data copied from host to device
  */
 cudaArray * syncVolume(
     texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType>& aTexture,
-    cudaArray* &d_aArray, const Volume& aVolume, const bool aAllocateMemory) {
+    cudaArray* d_aArray, const Volume& aVolume, const bool aAllocateMemory) {
   // clear memory
   if (d_aArray != 0 || aAllocateMemory) {
     HANDLE_ERROR(cudaUnbindTexture(aTexture));
@@ -648,19 +674,30 @@ cudaArray * syncVolume(
   return d_aArray;
 }
 
-/*! \fn cudaArray* setIlluminationTexture(const Volume& aVolume)
+/*! \fn cudaArray* setIlluminationTexture(const Volume &aVolume, 
+                                          cudaArray * d_aIllumination, 
+                                          const uint64_t aTimeLastMemSync)
  *  \brief copies illumination volume from host to device
  *  \param aVolume illumination volume
+ *  \param d_aIllumination array pointing to the device memory
+ *  \param aTimeLastMemSync timestamp on which the last rendering took place
  */
-cudaArray * setIlluminationTexture(const Volume &aVolume, cudaArray * d_aIllumination, 
-  const uint64_t aTimeLastMemSync) {
+cudaArray * setIlluminationTexture(const Volume &aVolume, 
+                                   cudaArray * d_aIllumination, 
+                                   const uint64_t aTimeLastMemSync) {
 
   bool allocateMemory = (aVolume.last_update > aTimeLastMemSync) || (aTimeLastMemSync == 0);
   
   return syncVolume(tex_illumination, d_aIllumination, aVolume, allocateMemory);
 }
 
-/*! \fn cudaArray* setGradientTextures(const Volume& aDx, const Volume& aDy, const Volume& aDz) 
+/*! \fn setGradientTextures(const Volume &aDx, 
+                         const Volume &aDy,
+                         const Volume &aDz, 
+                         cudaArray * &ptr_d_volumeDx,
+                         cudaArray * &ptr_d_volumeDy,
+                         cudaArray * &ptr_d_volumeDz,
+                         const uint64_t aTimeLastMemSync)
  *  \brief copies gradient volumes from host to device 
  *  \param aDx volume of gradient in x direction 
  *  \param aDy volume of gradient in y direction 
@@ -672,7 +709,7 @@ void setGradientTextures(const Volume &aDx,
                          cudaArray * &ptr_d_volumeDx,
                          cudaArray * &ptr_d_volumeDy,
                          cudaArray * &ptr_d_volumeDz,
-                        const uint64_t aTimeLastMemSync) {
+                         const uint64_t aTimeLastMemSync) {
   bool allocateMemoryDx = (aDx.last_update > aTimeLastMemSync) || (aTimeLastMemSync == 0);
   bool allocateMemoryDy = (aDy.last_update > aTimeLastMemSync) || (aTimeLastMemSync == 0);
   bool allocateMemoryDz = (aDz.last_update > aTimeLastMemSync) || (aTimeLastMemSync == 0);
@@ -688,22 +725,24 @@ void setGradientTextures(const Volume &aDx,
 }
 
 /*! \fn void syncWithDevice(const Volume &aVolumeEmission, const Volume &aVolumeAbsorption,
-                            const Volume &aVolumeReflection, const uint64_t &timeLastMemSync)
+                    const Volume &aVolumeReflection, const uint64_t aTimeLastMemSync,
+                    cudaArray * &d_aVolumeEmission, cudaArray * &d_aVolumeAbsorption, 
+                    cudaArray * &d_aVolumeReflection)
  * \brief Copies volume data to device and binds textures to the appropriate data.
  *         Data of one volume can be assigned to multiple textures and won't be copied to device, 
  *         if nothing had been changed since the last rendering.
- * \param aVolumeEmission
- * \param aVolumeAbsorption
- * \param aVolumeReflection
- * \param timeLastMemSync
+ * \param aVolumeEmission volume for emission
+ * \param aVolumeAbsorption volume for absorption
+ * \param aVolumeReflection volume for reflection
+ * \param aTimeLastMemSync timestamp on which the last rendering took place
+ * \param d_aVolumeEmission array pointing to the device memory of the emission volume
+ * \param d_aVolumeAbsorption array pointing to the device memory of the absorption volume
+ * \param d_aVolumeReflection array pointing to the device memory of the reflection volume
  */
 void syncWithDevice(const Volume &aVolumeEmission, const Volume &aVolumeAbsorption,
                     const Volume &aVolumeReflection, const uint64_t aTimeLastMemSync,
                     cudaArray * &d_aVolumeEmission, cudaArray * &d_aVolumeAbsorption, 
                     cudaArray * &d_aVolumeReflection) {
-
-  // TODO: implement Volume swapping functionality, i.e. if Volume swap, the device memory does not require deletion
-
   // similarities of volumes
   const bool simEmAb = (aVolumeEmission == aVolumeAbsorption);
   const bool simEmRe = (aVolumeEmission == aVolumeReflection);
@@ -733,8 +772,9 @@ void syncWithDevice(const Volume &aVolumeEmission, const Volume &aVolumeAbsorpti
     }
 
     if (simEmRe && !updatedRe) {
-      d_aVolumeReflection = setupTexture(tex_reflection, d_aVolumeReflection,
-                   d_idxReflection, vr::VolumeType::emission, updatedRe);
+      d_aVolumeReflection = referenceTexture(tex_reflection, d_aVolumeReflection,
+                   d_idxReflection, vr::VolumeType::emission);
+      updatedRe = true;
 
 #ifdef DEBUG
   mexPrintf("Emission = Reflection\n");
@@ -743,8 +783,9 @@ void syncWithDevice(const Volume &aVolumeEmission, const Volume &aVolumeAbsorpti
     }
 
     if (simEmAb && !updatedAb) {
-      d_aVolumeAbsorption = setupTexture(tex_absorption, d_aVolumeAbsorption,
-                   d_idxAbsorption, vr::VolumeType::emission, updatedAb);
+      d_aVolumeAbsorption = referenceTexture(tex_absorption, d_aVolumeAbsorption,
+                   d_idxAbsorption, vr::VolumeType::emission);
+      updatedAb = true;
 
 #ifdef DEBUG
   mexPrintf("Emission = Absorption\n");
@@ -765,8 +806,9 @@ void syncWithDevice(const Volume &aVolumeEmission, const Volume &aVolumeAbsorpti
     }
 
     if (simAbRe && !updatedRe) {
-      d_aVolumeReflection = setupTexture(tex_reflection, d_aVolumeReflection,
-                   d_idxReflection, vr::VolumeType::absorption, updatedRe);
+      d_aVolumeReflection = referenceTexture(tex_reflection, d_aVolumeReflection,
+                   d_idxReflection, vr::VolumeType::absorption);
+      updatedRe = true;
 
 #ifdef DEBUG
   mexPrintf("Absorption = Reflection\n");
@@ -776,8 +818,9 @@ void syncWithDevice(const Volume &aVolumeEmission, const Volume &aVolumeAbsorpti
     }
 
     if (simEmAb && !updatedEm) {
-      d_aVolumeAbsorption = setupTexture(tex_emission, d_aVolumeAbsorption,
-                   d_idxEmmission, vr::VolumeType::absorption, updatedEm);
+      d_aVolumeAbsorption = referenceTexture(tex_emission, d_aVolumeAbsorption,
+                   d_idxEmmission, vr::VolumeType::absorption);
+      updatedEm = true;
 
 #ifdef DEBUG
   mexPrintf("Absorption = Emission\n");
@@ -799,8 +842,9 @@ void syncWithDevice(const Volume &aVolumeEmission, const Volume &aVolumeAbsorpti
     }
 
     if (simAbRe && !updatedAb) {
-      d_aVolumeAbsorption = setupTexture(tex_absorption, d_aVolumeAbsorption,
-                   d_idxAbsorption, vr::VolumeType::reflection, updatedAb);
+      d_aVolumeAbsorption = referenceTexture(tex_absorption, d_aVolumeAbsorption,
+                   d_idxAbsorption, vr::VolumeType::reflection);
+      updatedAb = true;
 
 #ifdef DEBUG
   mexPrintf("Reflection = Absorption\n");
@@ -810,8 +854,9 @@ void syncWithDevice(const Volume &aVolumeEmission, const Volume &aVolumeAbsorpti
     }
 
     if (simEmAb && !updatedEm) {
-      d_aVolumeEmission = setupTexture(tex_emission, d_aVolumeEmission,
-                   d_idxEmmission, vr::VolumeType::reflection, updatedEm);
+      d_aVolumeEmission = referenceTexture(tex_emission, d_aVolumeEmission,
+                   d_idxEmmission, vr::VolumeType::reflection);
+      updatedEm = true;
 
 #ifdef DEBUG
   mexPrintf("Reflection = Emission\n");
