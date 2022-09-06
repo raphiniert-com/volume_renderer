@@ -1,16 +1,22 @@
 % This example uses one channel and one LightSource to render a movie.
 
+%% init
+% estimate working path, so that the script runs from any location
+workingpath = erase(mfilename('fullpath'), 'example2');
+
 % add VolumeRender to path
-addpath('matlab/VolumeRender');
+addpath(fullfile(workingpath, '..', 'src', 'matlab', 'VolumeRender'));
 
 % folder to the volume files
-path='../h5-data/';
+path=fullfile(workingpath, 'h5-data');
 
-filename = [path '/ViBE-Z_72hpf_v1.h5']; dataset = '/anatomy/average_brain';
+filename = fullfile(path, 'ViBE-Z_72hpf_v1.h5');
+dataset = '/anatomy/average_brain';
 
 data_main = h5read(filename, dataset);
 elementSizeUm = h5readatt(filename, dataset, 'element_size_um');
 
+%% setup renderer
 % create render object
 render = VolumeRender();
 
@@ -43,7 +49,7 @@ render.ScaleEmission=10;
 
 render.Color = [1,1,1];
 
-
+%% perform rendering of video sequence
 nStep=30;
 rendered_image = zeros([size(emission_main.Data,2), ...
                         size(emission_main.Data,1), ...
@@ -62,5 +68,6 @@ end
 normalizedImages = VolumeRender.normalizeSequence(rendered_image);
 
 
+%% create video and play it
 mov = immovie(normalizedImages);
 implay(mov);

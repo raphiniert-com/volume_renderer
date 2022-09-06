@@ -1,15 +1,19 @@
 % This example uses two channels and one LightSource to render a movie.
-% Furthermore, we implemented special effects.
+% Furthermore, let half of the main volume diffuse
+
+%% init
+% estimate working path, so that the script runs from any location
+workingpath = erase(mfilename('fullpath'), 'example3');
 
 % add VolumeRender to path
-addpath('matlab/VolumeRender');
+addpath(fullfile(workingpath, '..', 'src', 'matlab', 'VolumeRender'));
 
-% some tests for the matlab-C++ connection
-path='../h5-data/';
+% folder to the volume files
+path=fullfile(workingpath, 'h5-data');
 
-filename = [path '/ViBE-Z_72hpf_v1.h5']; 
-
+filename = fullfile(path, 'ViBE-Z_72hpf_v1.h5');
 dataset = '/anatomy/average_brain';
+
 data_main = h5read(filename, dataset);
 elementSizeUm = h5readatt(filename, dataset,'element_size_um');
 
@@ -94,18 +98,29 @@ for i=start_frame:end_frame
     rendered_images_main(:,:,:,i) = rendered_image;
 end
 
+% fade out half of the volume
 start_frame=(total_frames/4)+1;
 end_frame=total_frames/2;
+
+% compute factor for dimming
+tau = 1;
+n = end_frame-start_frame+1;
+t = linspace(1,10,n);
+factor = 3*exp(-tau*t);
+factor = factor/max(factor);
+factor(end) = 0;
+
 for i=start_frame:end_frame
     disp(strcat(' -image ', num2str(i)));
+    
+    half_size=size(data_main)/2;
+    data_main(1:end, 1:half_size(2), 1:end) = factor(i-n) * data_main(1:end, 1:half_size(2), 1:end);
 
-    absorptionVolume=Volume(data_absorption);
-    half_size=size(data_absorption)/2;
-    data_absorption(1:end, 1:half_size(2), 1:end) = (i/start_frame)/(end_frame);
-    absorptionVolume.resize(half_size);
-    absorptionVolume.normalize(0,1);
+    emissionVolume=Volume(data_main);
+    % absorptionVolume.resize(half_size);
+    % absorptionVolume.normalize(0,1);
 
-    render.VolumeAbsorption=absorptionVolume;
+    render.VolumeEmission=emissionVolume;
 
 
     rendered_image = render.render();
@@ -130,7 +145,7 @@ for i=start_frame:end_frame
 end
 
 
-%% render structure image channel
+%% setup for rendering structure image channel
 % create empty structure for all rendered images
 rendered_images_structure = zeros([  size(emission_structure.Data,2), ...
                                 size(emission_structure.Data,1), ...
@@ -152,12 +167,12 @@ render.VolumeAbsorption=emission_structure;
 render.VolumeEmission=emission_structure;
 
 render.ScaleEmission=1;
-render.ScaleAbsorption=0.6;
+render.ScaleAbsorption=1;
 render.ScaleReflection=1;
 
 render.Color = [1,1,0];
 
-
+%% render structure image channel
 start_frame=1;
 end_frame=total_frames;
 for i=start_frame:end_frame

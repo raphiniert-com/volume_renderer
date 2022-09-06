@@ -42,10 +42,11 @@ In `src/matlab` are four examples:
   - `example2.m`: create a video of the zebrafish embrio
   - `example3.m`: same as example 2, but using two channels
 
-They all are built upon one dataset from [1]. In order to run the examples mentioned above, one needs to create the dir `h5-data/` and put `ViBE-Z_72hpf_v1.h5` into it. The scripts are setup to be run from within `src/`.
+They all are built upon one dataset from [1]. In order to run the examples mentioned above, one needs to put the required file `ViBE-Z_72hpf_v1.h5` in `examples/h5-data/`. The scripts are setup to be run from anywhere, either with `add path` or change into the directory.
 
 ## License
-- This work is licensed under [GNU Affero General Public License version 3](https://opensource.org/licenses/AGPL-3.0). 
+- The Volume renderer is licensed under [GNU Affero General Public License version 3](https://opensource.org/licenses/AGPL-3.0).
+- The examples are licensed under [MIT](https://opensource.org/licenses/MIT).
 - Copyright 2020-present © [Raphael Scheible](https://raphiniert.com)
 
 ## Acknowledgments
