@@ -44,8 +44,8 @@ render.ImageResolution= ...
 % set render volumes
 render.VolumeEmission = emission_main;
 render.VolumeAbsorption = emission_main;
-render.ScaleReflection = 0.3;
-render.ScaleEmission=10;
+render.FactorReflection = 0.3;
+render.FactorEmission=10;
 
 render.Color = [1,1,1];
 

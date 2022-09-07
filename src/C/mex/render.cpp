@@ -191,7 +191,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     }
 
 
-    const float *scales = reinterpret_cast<float *>(mxGetPr(prhs[4]));
+    const float *factors = reinterpret_cast<float *>(mxGetPr(prhs[4]));
     const float3 elementSizeUm = make_float3Inv((float *)mxGetPr(prhs[5]));
     const size_t *imageResolution = reinterpret_cast<size_t *>(mxGetPr(prhs[6]));
     const float *ptrRotationMatrix = reinterpret_cast<float *>(mxGetPr(prhs[7]));
@@ -240,17 +240,17 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     const float3 color = make_float3((float *)mxGetPr(prhs[10]));
 
     RenderOptions options =
-        initRender(imageResolution[1], imageResolution[0], scales[0], scales[1],
-                  scales[2], elementSizeUm, rotationMatrix, opacityThreshold,
+        initRender(imageResolution[1], imageResolution[0], factors[0], factors[1],
+                  factors[2], elementSizeUm, rotationMatrix, opacityThreshold,
                   mmanager_instance->volumeEmission.extent);
 
     // switch
     mwSize dim[3] = {imageResolution[0], imageResolution[1], 3};
 
 #ifdef DEBUG
-    mexPrintf("scale ab: %f\n", options.scale_absorption);
-    mexPrintf("scale em: %f\n", options.scale_emission);
-    mexPrintf("scale re: %f\n", options.scale_reflection);
+    mexPrintf("factor ab: %f\n", options.factor_absorption);
+    mexPrintf("factor em: %f\n", options.factor_emission);
+    mexPrintf("factor re: %f\n", options.factor_reflection);
     mexPrintf("height: %lu\n", options.image_height);
     mexPrintf("width: %lu\n", options.image_width);
     mexPrintf("opacity: %f\n", options.opacity_threshold);

@@ -46,9 +46,9 @@ render = VolumeRender();
 % setup render options
 render.Color = [1,1,1];
 
-render.ScaleEmission=1;
-render.ScaleAbsorption=2;
-render.ScaleReflection=1;
+render.FactorEmission=1;
+render.FactorAbsorption=2;
+render.FactorReflection=1;
 
 render.ElementSizeUm=elementSizeUm;
 render.FocalLength=3.0;
@@ -166,9 +166,9 @@ render.ImageResolution=size(emission_structure.Data,[1 2]);
 render.VolumeAbsorption=emission_structure;
 render.VolumeEmission=emission_structure;
 
-render.ScaleEmission=1;
-render.ScaleAbsorption=1;
-render.ScaleReflection=1;
+render.FactorEmission=1;
+render.FactorAbsorption=1;
+render.FactorReflection=1;
 
 render.Color = [1,1,0];
 

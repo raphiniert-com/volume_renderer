@@ -84,12 +84,12 @@ struct RenderOptions {
   /*! The height of the rendered image */
   size_t image_height;
 
-  /*! A value the emission samples are scaled by */
-  float scale_emission;
-  /*! A value the absorption samples are scaled by */
-  float scale_absorption;
-  /*! A value the reflection samples are scaled by */
-  float scale_reflection;
+  /*! A value the emission samples are factord by */
+  float factor_emission;
+  /*! A value the absorption samples are factord by */
+  float factor_absorption;
+  /*! A value the reflection samples are factord by */
+  float factor_reflection;
 
   /*! min extent of the intersection box */
   float3 boxmin;
@@ -109,8 +109,8 @@ struct RenderOptions {
 };
 
 RenderOptions
-initRender(const size_t aWidth, const size_t aHeight, const float aScaleEmission,
-           const float aScaleReflection, const float aScaleAbsorption,
+initRender(const size_t aWidth, const size_t aHeight, const float aFactorEmission,
+           const float aFactorReflection, const float aFactorAbsorption,
            const float3 &aElementSizeUm, const float4x3 &aRotationMatrix,
            const float aOpacityThreshold, const cudaExtent &aVolumeSize);
 

@@ -290,7 +290,7 @@ __forceinline__ __device__ float angle(const float3 &a, const float3 &b) {
 /*! \fn float3 shade(const float3& aSamplePosition, const float3 aPosition,
                      const float3 aGradientStep, const float3 aViewPosition,
                      const float3 aColor, vr::LightSource * aLightSources, 
-                     const float aScaleReflection, const float3 aBoxmin, 
+                     const float aFactorReflection, const float3 aBoxmin, 
                      const float3 aBoxmax, const float3 aBoxScale)
  *  \brief determines the light performed at a voxelposition of all defined lightsources
  * 			   depending on the undelying illumination texture/model
@@ -300,7 +300,7 @@ __forceinline__ __device__ float angle(const float3 &a, const float3 &b) {
  * 	\param aViewPosition position of the viewer
  * 	\param aColor the color the rendered volume absorbs
  * 	\param aLightSources pointer to all light sources
- * 	\param aScaleReflection scales the sampled value of reflection
+ * 	\param aFactorReflection factors the sampled value of reflection
  * 	\param aBoxmin min extents of the intersection box
  * 	\param aBoxmin max extents of the intersection box
  * 	\param aBoxScale 1 devided by size of the box
@@ -309,9 +309,9 @@ __forceinline__ __device__ float angle(const float3 &a, const float3 &b) {
 __device__ float3 shade(const float3 &aSamplePosition, const float3 aPosition,
                         const float3 aGradientStep, const float3 aViewPosition,
                         const float3 aColor, vr::LightSource *aLightSources,
-                        const float aScaleReflection, const float3 aBoxmin,
+                        const float aFactorReflection, const float3 aBoxmin,
                         const float3 aBoxmax, const float3 aBoxScale) {
-  const float scaleReflection = aScaleReflection;
+  const float factorReflection = aFactorReflection;
 
   // negativ gradient approx surface normal
   const float3 surfaceNormal =
@@ -342,7 +342,7 @@ __device__ float3 shade(const float3 &aSamplePosition, const float3 aPosition,
 
     // lookup in tex_reflection
     float reflection =
-        scaleReflection * tex3D(getTexture(d_idxReflection), aSamplePosition.x,
+        factorReflection * tex3D(getTexture(d_idxReflection), aSamplePosition.x,
                                 aSamplePosition.y, aSamplePosition.z);
 
     float light = tex3D(tex_illumination, alpha, beta, gamma);
@@ -379,9 +379,9 @@ __global__ void d_render(float *d_aOutput, const vr::RenderOptions aOptions,
       const_cast<vr::LightSource *>(aLightSources);
   const float tstep = aOptions.tstep;
   const float opacityThreshold = aOptions.opacity_threshold;
-  const float scaleAbsorption = aOptions.scale_absorption;
-  const float scaleEmission = aOptions.scale_emission;
-  const float scaleReflection = aOptions.scale_reflection;
+  const float factorAbsorption = aOptions.factor_absorption;
+  const float factorEmission = aOptions.factor_emission;
+  const float factorReflection = aOptions.factor_reflection;
 
   const float3 boxMin = aOptions.boxmin;
   const float3 boxMax = aOptions.boxmax;
@@ -394,10 +394,10 @@ __global__ void d_render(float *d_aOutput, const vr::RenderOptions aOptions,
   // calculate eye ray in world space
   vr::Ray eyeRay;
 
-  // box scale
+  // box factor
   const float3 boxScale = 1.f / (boxMax - boxMin);
 
-  // translate into scale
+  // translate into factor
   const float cameraXOffset = aOptions.rotation_matrix.m[3].x;
   const float focalLength = aOptions.rotation_matrix.m[3].y;
   const float objectDistance = aOptions.rotation_matrix.m[3].z;
@@ -442,10 +442,10 @@ __global__ void d_render(float *d_aOutput, const vr::RenderOptions aOptions,
     // ### sampling ###
     // ################
 
-    // read from 3D texture and apply several scale factor
-    float emission = scaleEmission * tex3D(getTexture(d_idxEmmission), pos_sample.x,
+    // read from 3D texture and apply several factor factor
+    float emission = factorEmission * tex3D(getTexture(d_idxEmmission), pos_sample.x,
                                            pos_sample.y, pos_sample.z);
-    float absorption = scaleAbsorption * tex3D(getTexture(d_idxAbsorption), pos_sample.x,
+    float absorption = factorAbsorption * tex3D(getTexture(d_idxAbsorption), pos_sample.x,
                                                pos_sample.y, pos_sample.z);
 
     float3 sample = make_float3(emission);
@@ -463,7 +463,7 @@ __global__ void d_render(float *d_aOutput, const vr::RenderOptions aOptions,
 
     float3 illumination =
         shade(pos_sample, pos, aGradientStep, eyeRay.origin, aColor,
-              lightSources, scaleReflection, boxMin, boxMax, boxScale);
+              lightSources, factorReflection, boxMin, boxMax, boxScale);
 
     float3 illuminated = colored + illumination;
 

@@ -88,9 +88,9 @@ void selectBestDevice() {
 
 /*! \fn RenderOptions  initRender(	const uint aWidth,
                                     const uint aHeight,
-                                    const float aScaleEmission,
-                                    const float aScaleAbsorption,
-                                    const float aScaleReflection,
+                                    const float aFactorEmission,
+                                    const float aFactorAbsorption,
+                                    const float aFactorReflection,
                                     const float3& aElementSizeUm,
                                     const float4x3& aRotationMatrix,
                                     const float aOpacityThreshold,
@@ -99,9 +99,9 @@ void selectBestDevice() {
  computes
  *  \param aWidth width of the rendered image
  *  \param aHeight height of the rendered image
- *  \param aScaleEmission A value the emission samples are scaled by
- *  \param aScaleAbsorption A value the absorption samples are scaled by
- *  \param aScaleReflection A value the reflection samples are scaled by
+ *  \param aFactorEmission A value the emission samples are factord by
+ *  \param aFactorAbsorption A value the absorption samples are factord by
+ *  \param aFactorReflection A value the reflection samples are factord by
  *  \param aElementSizeUm extent of the element size in um
  *  \param aRotationMatrix Rotation matrix that is applied to the scene
         last vector: [camera x-offset; focal length; object distance]
@@ -110,8 +110,8 @@ void selectBestDevice() {
  *  \return RenderOptions struct
  */
 RenderOptions
-initRender(const size_t aWidth, const size_t aHeight, const float aScaleEmission,
-           const float aScaleReflection, const float aScaleAbsorption,
+initRender(const size_t aWidth, const size_t aHeight, const float aFactorEmission,
+           const float aFactorReflection, const float aFactorAbsorption,
            const float3 &aElementSizeUm, const float4x3 &aRotationMatrix,
            const float aOpacityThreshold, const cudaExtent &aVolumeSize) {
   RenderOptions result;
@@ -144,9 +144,9 @@ initRender(const size_t aWidth, const size_t aHeight, const float aScaleEmission
   float freq = 1.f / (2.2f * maxDiagonal);
   result.tstep = freq;
 
-  result.scale_absorption = aScaleAbsorption;
-  result.scale_emission = aScaleEmission;
-  result.scale_reflection = aScaleReflection;
+  result.factor_absorption = aFactorAbsorption;
+  result.factor_emission = aFactorEmission;
+  result.factor_reflection = aFactorReflection;
 
   result.opacity_threshold = aOpacityThreshold;
 

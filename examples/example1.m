@@ -49,8 +49,8 @@ render.ImageResolution=size(emission_structure.Data,[1, 2]);
 % set render volumes
 render.VolumeEmission=emission_structure;
 render.VolumeAbsorption=emission_structure;
-render.ScaleAbsorption=0.6;
-render.ScaleReflection=0.4;
+render.FactorAbsorption=0.6;
+render.FactorReflection=0.4;
 
 render.Color = [1,1,0];
 
@@ -66,9 +66,9 @@ absorptionVolume.normalize(0,1);
 render.VolumeEmission=emission_main;
 render.VolumeAbsorption=absorptionVolume;
 % make it kind of transparent
-render.ScaleEmission=0.1;
-render.ScaleAbsorption=0.4;
-render.ScaleReflection=0.1;
+render.FactorEmission=0.1;
+render.FactorAbsorption=0.4;
+render.FactorReflection=0.1;
 render.Color = [1,1,1];
 
 rendered_image_main = render.render();
