@@ -25,14 +25,14 @@ render.ElementSizeUm=elementSizeUm;
 % setup illumination settings
 render.VolumeIllumination = Volume(HenyeyGreenstein(64));
 
-render.LightSources = LightSource([15,15,0], [1,1,1]);
+render.LightSources = LightSource([1500,1500,0], [1,1,1]);
 
 render.FocalLength = 3.0;
 render.DistanceToObject = 6.0;
 render.rotate(90,0,0);
 
 % rotate some more
-render.rotate(0,-45,0);
+render.rotate(-15,-15,15);
 
 % create volumes
 emission_main = Volume(data_main);

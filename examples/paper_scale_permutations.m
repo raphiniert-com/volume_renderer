@@ -2,7 +2,7 @@
 
 %% init
 % estimate working path, so that the script runs from any location
-workingpath = erase(mfilename('fullpath'), 'paper_illustration_emissions');
+workingpath = erase(mfilename('fullpath'), 'paper_scale_permutations');
 
 % add VolumeRender to path
 addpath(fullfile(workingpath, '..', 'src', 'matlab', 'VolumeRender'));
@@ -137,22 +137,36 @@ fclose('all');
 
 %% crop
 % TODO: add axis with the particular parameter & values
+fontSizeLabelAxis=30;
+fontSizeLabel=25;
 for i = 1:6
     figure;
     collage_img=montage(img((i-1)*36+1:36*i));
     filename=fullfile(workingpath,sprintf('../png/collage_%d.png', (i-1)*stepsize));
-    caption =  sprintf("cebrafish embrio with scale emission: %0.1f", (i-1) * 0.2);
-    title(caption, 'FontSize', 10);
+    %caption =  sprintf("cebrafish embrio with scale emission: %0.1f", (i-1) * 0.2);
+    %title(caption, 'FontSize', 10);
+
+    ax = gca;
+    ax.FontSize = fontSizeLabel;
 
     axis('on', 'image');
     xticks([targetSize(2)/4:targetSize(2)/2:10*targetSize(2)])
     xticklabels({'0','0.2','0.4','0.6','0.8','1.0'})
-    xlabel('scale absorption');
-
 
     yticks([targetSize(1)/4:targetSize(1)/2:10*targetSize(1)])
     yticklabels({'0','0.2','0.4','0.6','0.8','1.0'})
-    ylabel('scale reflection');
+
+    xlabel('scale absorption', 'FontSize', fontSizeLabelAxis);
+    ylabel('scale reflection', 'FontSize', fontSizeLabelAxis);
+
+    
+
+    % make sure that the x and ylabels are in the picture
+    scale = 0.06;
+    pos = get(gca, 'Position');
+    pos(2) = pos(2)+scale*pos(4);
+    pos(4) = (1-scale)*pos(4);
+    set(gca, 'Position', pos)
 
     hIm = findall(collage_img,'type','image');
     image = get(hIm,'CData');
@@ -178,4 +192,7 @@ xlabel('');
 yticks([targetSize(1)/4:targetSize(1)/2:10*targetSize(1)])
 yticklabels({'0','0.2','0.4','0.6','0.8','1.0'})
 ylabel('');
+
+ax = gca;
+ax.FontSize = 20;
 

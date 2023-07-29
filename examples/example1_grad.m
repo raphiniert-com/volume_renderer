@@ -39,14 +39,14 @@ render.VolumeGradientZ = gZ;
 
 % setup illumination settings
 render.VolumeIllumination=Volume(HenyeyGreenstein(64));
-render.LightSources = [LightSource([1,2,-3],[0,1,1]), LightSource([0,1,9],[1,0.5,1])];
+render.LightSources = [LightSource([500,1000,550],[0,1,1]), LightSource([0,550,90],[1,0.5,1])];
 
 % misc parameters
 render.ElementSizeUm=elementSizeUm;
 render.FocalLength=3.0;
 render.DistanceToObject=6;
 
-render.rotate(-125,25,0);
+render.rotate(125,25,0);
 
 render.OpacityThreshold=0.9;
 
@@ -95,4 +95,4 @@ render.resetGradientVolumes();
 rendered_image_grad_computed = render.render();
 
 figure;
-imshow(rendered_image_grad_computed);
+imshow(rendered_image_grad_computed+rendered_image_structure);

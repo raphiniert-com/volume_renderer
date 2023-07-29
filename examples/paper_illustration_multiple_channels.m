@@ -52,7 +52,7 @@ render.VolumeAbsorption=emission_structure;
 render.FactorAbsorption=0.6;
 render.FactorReflection=0.4;
 
-render.Color = [1,1,0];
+render.Color = [1,0,1];
 
 rendered_image_structure = render.render();
 
@@ -76,4 +76,4 @@ rendered_image_main = render.render();
 
 %% display the images and the combined one
 figure;
-imshow(rendered_image_main+rendered_image_structure);
+imshow(imcomplement(rendered_image_main)+rendered_image_structure);
