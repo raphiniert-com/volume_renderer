@@ -141,13 +141,13 @@ classdef VolumeRender < handle
                 rect=[0 0 (size(rightImage,2)-delta) size(rightImage,1)];
                 rightImage=imcrop(rightImage, rect);
                 
-                if (strcmp(this.StereoOutput,StereoRenderMode.RedCyan))
+                if this.StereoOutput == StereoRenderMode.RedCyan
                     % RGB - anaglyph
                     image=zeros([size(leftImage,1), size(leftImage,2), 3]);
                     image(:,:,1) = leftImage(:,:,1);
                     image(:,:,2) = rightImage(:,:,2);
                     image(:,:,3) = rightImage(:,:,3);
-                elseif( strcmp(this.StereoOutput, StereoRenderMode.LeftRightHorizontal) )
+                elseif this.StereoOutput == StereoRenderMode.LeftRightHorizontal
                     image = [leftImage, rightImage];
                 end
                     
@@ -228,16 +228,6 @@ classdef VolumeRender < handle
                 this.VolumeAbsorption = val;
             else
                 error('VolumeAbsorption must be of type Volume');
-            end
-        end
-        
-        function set.StereoOutput(this, val)
-            if (strcmp(val,'red-cyan'))
-                this.StereoOutput = val;
-            elseif (strcmp(val,'left-right-horizontal'))
-                this.StereoOutput = val;
-            else
-                error('allowed values are "red-cyan", "left-right-horizontal"');
             end
         end
     end % methods
