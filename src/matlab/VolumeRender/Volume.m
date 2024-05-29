@@ -26,6 +26,21 @@ classdef Volume < handle
                 obj.Data=imresize(obj.Data,newsize);
             end
         end
+
+        function s=size(obj)
+            s=size(obj.Data);
+        end
+
+        function pad(obj, padding, value)
+            if (ndims(obj.Data) == 3)
+                % newsize = size(obj.Data) + padding;
+                obj.Data = padarray(obj.Data,[padding padding], value, 'both');
+                obj.Data = permute(obj.Data,[1,3,2]);
+                
+                obj.Data = padarray(obj.Data,[0 padding], value, 'both');
+                obj.Data = permute(obj.Data,[1,3,2]);
+            end
+        end
         
         function image=mip(obj)
           % maximum intensity projection
