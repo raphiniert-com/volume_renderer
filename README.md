@@ -10,8 +10,8 @@ _Volume Renderer <small>for use with MATLAB®</small>_ extends MATLAB® by a GPU
 
 
 ## Requirements
-* CUDA® capable NVIDIA® graphics device with at least [Kepler™](https://en.wikipedia.org/wiki/Kepler_(microarchitecture)) architecture
-* Linux or Windows computer (64 bit) with installed NVIDIA® driver and CUDA® 11
+* CUDA® capable NVIDIA® graphics device which is compatible with CUDA 10.2
+* Linux or Windows computer (64 bit) with installed NVIDIA® driver and CUDA® 10.2
 * MATLAB® <sup id="a1">[1](#f1)</sup> with
   * [Image Processing Toolbox](https://www.mathworks.com/products/image.html)
   * [Parallel Computing Tookbox](https://mathworks.com/products/parallel-computing.html) for compilation (requires [mexcuda](https://de.mathworks.com/help/parallel-computing/mexcuda.html))
@@ -19,7 +19,7 @@ _Volume Renderer <small>for use with MATLAB®</small>_ extends MATLAB® by a GPU
 
 ## Installation
 First download and extract or clone the repository. Next, download and install the following tools:
-- [CUDA 11](https://developer.nvidia.com/cuda-downloads)
+- [CUDA 10.2](https://developer.nvidia.com/cuda-downloads)
 - [Setup some C compiler](https://de.mathworks.com/support/requirements/supported-compilers.html)
 
 Next, open matlab and navigate to the folder with the render code in matlab. Adjust the CUDA path in `src/make.m` and run it from within `src`. This command will compile all mex-files for the renderer.
@@ -31,7 +31,7 @@ In order to generate a [doxygen documentation](https://doxygen.nl) in html, we o
 The resulting Documentation will be stored in `docs/doxygen`.
 
 ## Example
-The following video demonstrates the power of the renderer<sup id="a2">[2](#f2)</sup>:
+The following video demonstrates the power of the renderer:
 
 ![Demo CountPages alpha](docs/example_vr_zebra.gif)
 
@@ -40,7 +40,7 @@ In `src/matlab` are four examples:
   - `example1.m`: creating a 2D image of a zebrafish embrio dataset
   - `example1_grad.m`: same as above, but using precomputed gradient volumes instead of on the fly gradient computation
   - `example2.m`: create a video of the zebrafish embrio
-  - `example3.m`: same as example 2, but using two channels
+  - `example3.m`: same as example 2, but using two channels and fading out one side of the average brain of the zebrafish
 
 They all are built upon one dataset from [1]. In order to run the examples mentioned above, one needs to put the required file `ViBE-Z_72hpf_v1.h5` in `examples/h5-data/`. The scripts are setup to be run from anywhere, either with `add path` or change into the directory.
 
@@ -57,5 +57,4 @@ _Volume Renderer for use with MATLAB®_ was originally developed as a student pr
 
 ---
 
-<a id="f1"></a>1: tested and developed under R2022a; might work from R2018a [↩](#a1)  
-<a id="f2"></a>2: provided by Benjamin Ummenhofer, data from <a id="r1">[[1]](#ref1)</a> [↩](#a2)
+<a id="f1"></a>1: tested and developed under R2022a; might work from R2018a [↩](#a1)
