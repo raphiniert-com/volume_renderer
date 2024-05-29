@@ -11,17 +11,18 @@ addpath(fullfile(workingpath, '..', 'src', 'matlab', 'VolumeRender'));
 path=fullfile(workingpath, 'h5-data');
 
 filename = fullfile(path, 'ViBE-Z_72hpf_v1.h5'); 
+
 dataset = '/anatomy/average_brain';
-
 data_main = h5read(filename, dataset);
-
-elementSizeUm = h5readatt(filename, dataset,'element_size_um');
-emission_main = Volume(data_main);
 
 dataset = '/expression/3A10';
 data_structure = h5read(filename, dataset);
 
+elementSizeUm = h5readatt(filename, dataset,'element_size_um');
+emission_main = Volume(data_main);
 emission_structure = Volume(data_structure);
+
+
 
 %% setup general render settings
 % create render object
@@ -33,7 +34,7 @@ render.LightSources = [LightSource([0,0,3],[1,1,1]), LightSource([0,-5,0],[1,1,1
 
 % misc parameters
 render.ElementSizeUm=elementSizeUm;
-render.FocalLength=3.0;
+render.FocalLength=4.5;
 render.DistanceToObject=6;
 
 render.rotate(45,25,45);
@@ -56,7 +57,7 @@ render.Color = [1,0,1];
 
 rendered_image_structure = render.render();
 
- render.memInfo();
+render.memInfo();
 
 %% second image (main zebra fish)
 absorptionVolume=Volume(data_main);
