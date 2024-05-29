@@ -6,6 +6,10 @@ workingpath = erase(mfilename('fullpath'), 'example1');
 
 % add VolumeRender to path
 addpath(fullfile(workingpath, '..', 'src', 'matlab', 'VolumeRender'));
+addpath(fullfile(workingpath, '..', 'src', 'matlab', 'StopWatch'));
+
+sw = Stopwatch('timings');
+sw.add('r', 'benchmark rendering');
 
 % folder to the volume files
 path=fullfile(workingpath, 'h5-data');
@@ -55,7 +59,7 @@ render.Color = [1,1,0];
 
 rendered_image_structure = render.render();
 
- render.memInfo();
+render.memInfo();
 
 %% second image (main zebra fish)
 absorptionVolume=Volume(data_main);
@@ -70,8 +74,11 @@ render.FactorAbsorption=0.4;
 render.FactorReflection=0.1;
 render.Color = [1,1,1];
 
+sw.start('r');
 rendered_image_main = render.render();
+sw.stop('r');
 
+sw.print();
 
 %% display the images and the combined one
 figure;
