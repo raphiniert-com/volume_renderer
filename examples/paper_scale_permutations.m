@@ -21,6 +21,7 @@ data_main = h5read(filename, dataset);
 elementSizeUm = h5readatt(filename, dataset,'element_size_um');
 emission_main = Volume(data_main);
 
+
 dataset = '/expression/3A10';
 data_structure = h5read(filename, dataset);
 
@@ -58,7 +59,7 @@ absorptionVolume.resize(0.5);
 absorptionVolume.normalize(0,1);
 
 render.VolumeEmission=emission_main;
-render.VolumeAbsorption=absorptionVolume;
+render.VolumeAbsorption=Volume(1);
 
 
 % make it kind of transparent
@@ -107,7 +108,7 @@ y=10/stepsize + 1;
 
 img={};
 
-targetSize = [350 400];
+targetSize = [400 400];
 win1 = centerCropWindow2d(size(rendered_image),targetSize);
 
 for e = 0:stepsize:10
@@ -136,7 +137,6 @@ fclose('all');
 
 
 %% crop
-% TODO: add axis with the particular parameter & values
 fontSizeLabelAxis=30;
 fontSizeLabel=25;
 for i = 1:6
