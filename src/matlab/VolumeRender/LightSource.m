@@ -1,8 +1,8 @@
 classdef LightSource
     %For explanation see documentation (pdf)
     properties(GetAccess='public')
-        Color;
         Position;
+        Color;
     end
     methods
         % construct

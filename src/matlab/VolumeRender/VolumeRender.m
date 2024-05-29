@@ -1,40 +1,97 @@
 classdef VolumeRender < handle
     % For explanation see documentation (pdf)
     properties
-        FocalLength=0.0;            % 
-        DistanceToObject=0.0;       % 
-        OpacityThreshold=0.95;      % 
+        FocalLength(1,1)      = 0.0;
+        DistanceToObject(1,1) = 0.0;
+        OpacityThreshold(1,1) = 0.95;
         
-        ElementSizeUm=[1,1,1];      % 
+        LightSources(1,:)     = false;
         
-        LightSources=false;         % 
-        
-        Color=[1,1,1];              % 
-        
-        VolumeEmission=false;       % 
-        VolumeReflection=Volume(1);         % 
-        VolumeAbsorption=false;     % 
-        VolumeGradientX=false;      % 
-        VolumeGradientY=false;      % 
-        VolumeGradientZ=false;      % 
-        VolumeIllumination=false;   % 
+        Color(1,3)            = [1,1,1];
  
-        ScaleEmission=1.0;          % 
-        ScaleReflection=1.0;        % 
-        ScaleAbsorption=1.0;        % 
+        FactorEmission(1,1)    = 1.0;
+        FactorReflection(1,1)  = 1.0;
+        FactorAbsorption(1,1)  = 1.0;
         
-        CameraXOffset=0;
-        StereoOutput=StereoRenderMode.RedCyan;
+        CameraXOffset(1,1)    = 0;
+        StereoOutput StereoRenderMode = StereoRenderMode.RedCyan;
         
-        RotationMatrix = eye(3);   % 
-        ImageResolution = [0,0];    % 
+        ElementSizeUm(1,3)    = [1,1,1];
+        RotationMatrix(3,3)   = eye(3);
+        ImageResolution(1,2)  = [0,0];
+        
+        TimeLastMemSync       = uint64(0);
+    end
+
+    properties(SetObservable)
+        VolumeReflection      = Volume(1);
+        
+        VolumeEmission        = false;
+        VolumeAbsorption      = false;
+        VolumeGradientX       = false;
+        VolumeGradientY       = false;
+        VolumeGradientZ       = false;
+        VolumeIllumination    = false;
+    end
+
+    properties (SetAccess = private, Hidden = true)
+        objectHandle; % Handle to the underlying C++ memory manager instance
+        
     end
     methods        
-        % construct
-        function obj = VolumeRender()
+        % Constructor
+        function this = VolumeRender(varargin)
+            addlistener(this,'VolumeEmission','PostSet', @propEventHandler);
+            addlistener(this,'VolumeAbsorption','PostSet', @propEventHandler);
+            addlistener(this,'VolumeReflection','PostSet', @propEventHandler);
+            addlistener(this,'VolumeGradientX','PostSet', @propEventHandler);
+            addlistener(this,'VolumeGradientY','PostSet', @propEventHandler);
+            addlistener(this,'VolumeGradientZ','PostSet', @propEventHandler);
+            addlistener(this,'VolumeIllumination','PostSet', @propEventHandler);
+            
+            this.objectHandle = volumeRender('new', varargin{:});
         end
 
-        function rotate(obj, alpha, beta, gamma)
+        % Destructor
+        function delete(this)
+            volumeRender('delete', this.objectHandle);
+        end
+
+        function syncVolumes(this)
+            validate =  [islogical(this.VolumeGradientX), ...
+                         islogical(this.VolumeGradientY), ...
+                         islogical(this.VolumeGradientZ)];
+
+            if (all(not(validate)))
+                volumeRender(  'sync_volumes', this.objectHandle, ...
+                               this.TimeLastMemSync, ...
+                               this.VolumeEmission, ...
+                               this.VolumeReflection, ...
+                               this.VolumeAbsorption, ...
+                               this.VolumeGradientX, ...
+                               this.VolumeGradientY, ...
+                               this.VolumeGradientZ);
+            else
+                volumeRender(  'sync_volumes', this.objectHandle, ...
+                               this.TimeLastMemSync, ...
+                               this.VolumeEmission, ...
+                               this.VolumeReflection, ...
+                               this.VolumeAbsorption);
+            end
+
+            % save time of render process
+            this.TimeLastMemSync=timestamp;
+        end
+
+        function memInfo(this)
+            volumeRender('mem_info', this.objectHandle);
+        end
+
+        function memClear(this)
+            volumeRender('delete', this.objectHandle);
+        end
+
+        function rotate(this, alpha, beta, gamma)
             % rotation of the viewmatrix
             % alpha     rotation around col
             % gamma     rotation adound lev
@@ -50,32 +107,32 @@ classdef VolumeRender < handle
                          sind(gamma), cosd(gamma), 0;
                          0,0,1];
 
-            obj.RotationMatrix = obj.RotationMatrix * ...
+            this.RotationMatrix = this.RotationMatrix * ...
                                  RotationX * RotationY * RotationZ;
         end
         
-        function image = render(obj)
+        function image = render(this)
             % rendering image. If CmaeraXOffset does not equal 0
             % a 3D anaglyph will be returned
             % image     output (3D) image
             
-            if (obj.CameraXOffset==0)
-                image=prender(obj, single(obj.CameraXOffset), flip(obj.ImageResolution));
+            if (this.CameraXOffset==0)
+                image=p_render(this, single(this.CameraXOffset), flip(this.ImageResolution));
             else
                 % render 3D (combine the images)
-                base = obj.CameraXOffset/2;
+                base = this.CameraXOffset/2;
                 
                 
-                %angleFieldOfview=2*atan(obj.ImageResolution(2)/(2*obj.FocalLength));
-                angleFieldOfview=2*atan(1/obj.FocalLength);
-                delta = round((base * obj.ImageResolution(2)) / ...
-                        (2*obj.FocalLength * tan(angleFieldOfview/2)));
-                
+                %angleFieldOfview=2*atan(this.ImageResolution(2)/(2*this.FocalLength));
+                angleFieldOfview=2*atan(1/this.FocalLength);
+                delta = round((base * this.ImageResolution(2)) / ...
+                        (2*this.FocalLength * tan(angleFieldOfview/2)));
+
                 % render more pixel
-                resolution=flip(obj.ImageResolution) + [0, delta];
+                resolution=flip(this.ImageResolution) + [0, delta];
                 
-                rightImage=prender(obj, base, resolution);
-                leftImage=prender(obj, -base, resolution);
+                rightImage=p_render(this, base, resolution);
+                leftImage=p_render(this, -base, resolution);
                 
                 % combine the 2 images, crop delta
                 rect=[(delta+1) 0 size(leftImage,2) size(leftImage,1)];
@@ -84,208 +141,110 @@ classdef VolumeRender < handle
                 rect=[0 0 (size(rightImage,2)-delta) size(rightImage,1)];
                 rightImage=imcrop(rightImage, rect);
                 
-                if( strcmp(obj.StereoOutput,StereoRenderMode.RedCyan) )
+                if this.StereoOutput == StereoRenderMode.RedCyan
                     % RGB - anaglyph
                     image=zeros([size(leftImage,1), size(leftImage,2), 3]);
                     image(:,:,1) = leftImage(:,:,1);
                     image(:,:,2) = rightImage(:,:,2);
                     image(:,:,3) = rightImage(:,:,3);
-                elseif( strcmp(obj.StereoOutput, StereoRenderMode.LeftRightHorizontal) )
+                elseif this.StereoOutput == StereoRenderMode.LeftRightHorizontal
                     image = [leftImage, rightImage];
                 end
                     
             end
         end
     end
-       
+    
     % set methods
     methods
-        function set.ElementSizeUm(obj, val)
-            if (isequal(size(val), [1,3]))
-                obj.ElementSizeUm = val;
-            elseif (isequal(size(val), [3,1]))
-                obj.ElementSizeUm = val'; % transpose it
-            else
-                error('dimensions of ImageResolution must be [1,3]');
-            end
+        function resetGradientVolumes(this)
+            % reset gradient volumes in order to switch render to gradient computation
+            this.VolumeGradientX       = false;
+            this.VolumeGradientY       = false;
+            this.VolumeGradientZ       = false;
         end
-        
-        function set.Color(obj, val)
-            if (isequal(size(val), [1,3]))
-                obj.Color = val;
-            else
-                error('dimensions of ImageResolution must be [1,3] and values between 0 and 1');
-            end
-        end
-        
-        function set.LightSources(obj, val)
-            % ensure correct dimension
-            validate = [size(val,1) == 1, ...
-                        ismatrix(val), ...
-                        ndims(val) == 2, ...
-                        isa(val, 'LightSource')
-                        ];
-            if (all(validate))
-                obj.LightSources = val;
+
+        function set.LightSources(this, val)
+            % ensure correct type
+            if (all(isa(val, 'LightSource')))
+                this.LightSources = val;
             else
                 error('LightSources must be a 1xN vector with data of type LightSource!');
             end
         end
         
-        function set.VolumeIllumination(obj, val)
+        function set.VolumeIllumination(this, val)
             if (isa(val,'Volume'))
-                obj.VolumeIllumination = val;
+                this.VolumeIllumination = val;
             else
                 error('VolumeEmission must be of type Volume');
             end
         end
         
-        function set.VolumeEmission(obj, val)
+        function set.VolumeEmission(this, val)
             if (isa(val,'Volume'))
-                obj.VolumeEmission = val;
+                this.VolumeEmission = val;
             else
                 error('VolumeEmission must be of type Volume');
             end
         end
         
-        function set.VolumeReflection(obj, val)
+        function set.VolumeReflection(this, val)
             if (isa(val,'Volume'))
-                obj.VolumeReflection = val;
+                this.VolumeReflection = val;
             else
                 error('VolumeReflection must be of type Volume');
             end
         end
         
-        function set.VolumeGradientX(obj, val)
-            if (isa(val,'Volume'))
-                obj.VolumeGradientX = val;
+        function set.VolumeGradientX(this, val)
+            if (isa(val,'Volume') || val == false)
+                this.VolumeGradientX = val;
             else
-                error('VolumeReflection must be of type Volume');
+                error('VolumeGradientX must be of type Volume');
             end
         end
-        function set.VolumeGradientY(obj, val)
-            if (isa(val,'Volume'))
-                obj.VolumeGradientY = val;
+        function set.VolumeGradientY(this, val)
+            if (isa(val,'Volume') || val == false)
+                this.VolumeGradientY = val;
             else
-                error('VolumeReflection must be of type Volume');
+                error('VolumeGradientY must be of type Volume');
             end
         end
-        function set.VolumeGradientZ(obj, val)
-            if (is(val,'Volume'))
-                obj.VolumeGradientZ = val;
+        function set.VolumeGradientZ(this, val)
+            if (isa(val,'Volume') || val == false)
+                this.VolumeGradientZ = val;
             else
-                error('VolumeReflection must be of type Volume');
+                error('VolumeGradientZ must be of type Volume');
             end
         end
         
-        function set.VolumeAbsorption(obj, val)
+        function set.VolumeAbsorption(this, val)
             if (isa(val,'Volume'))
                 minVal = min(min(min(val.Data)));
                 if minVal < 0
                     warning('VolumeAbsorption is not allowed to contain data smaller than 0!');
                 end
-                obj.VolumeAbsorption = val;
+                this.VolumeAbsorption = val;
             else
                 error('VolumeAbsorption must be of type Volume');
             end
         end
-        
-        function set.FocalLength(obj, val)
-            if (isequal(size(val), [1,1]))
-                obj.FocalLength = val;
-            else
-                error('dimensions of ImageResolution must be a scalar');
-            end
-        end
-        
-        function set.DistanceToObject(obj, val)
-            if (isequal(size(val), [1,1]))
-                obj.DistanceToObject = val;
-            else
-                error('dimensions of ImageResolution must be a scalar');
-            end
-        end
-        
-        function set.OpacityThreshold(obj, val)
-            if (isequal(size(val), [1,1]))
-                obj.OpacityThreshold = val;
-            else
-                error('dimensions of ImageResolution must be a scalar');
-            end
-        end
-        
-        function set.CameraXOffset(obj, val)
-            if (isequal(size(val), [1,1]))
-                obj.CameraXOffset = val;
-            else
-                error('dimensions of ImageResolution must be a scalar');
-            end
-        end
-        
-        function set.StereoOutput(obj, val)
-            if (strcmp(val,'red-cyan'))
-                obj.StereoOutput = val;
-            elseif (strcmp(val,'left-right-horizontal'))
-                obj.StereoOutput = val;
-            else
-                error('allowed values are "red-cyan", "left-right-horizontal"');
-            end
-        end
-        
-        function set.RotationMatrix(obj, val)
-            if (isequal(size(val), [3,3]))
-                    obj.RotationMatrix = val;
-            else
-                error('dimensions of RotationMatrix must be [3,3]');
-            end
-        end
-        
-        function set.ImageResolution(obj, val)
-            if (isequal(size(val), [1,2]))
-                obj.ImageResolution = val;
-            else
-                error('dimensions of ImageResolution must be a [1,2]');
-            end
-        end
-        
-        function set.ScaleEmission(obj, val)
-             if (isequal(size(val), [1,1]))
-                 obj.ScaleEmission = val;
-             else
-                 error('dimensions of ImageResolution must be a scalar');
-             end
-        end
-         
-        function set.ScaleReflection(obj, val)
-             if (isequal(size(val), [1,1]))
-                 obj.ScaleReflection = val;
-             else
-                 error('dimensions of ImageResolution must be a scalar');
-             end
-        end
-         
-        function set.ScaleAbsorption(obj, val)
-             if (isequal(size(val), [1,1]))
-                 obj.ScaleAbsorption = val;
-             else
-                 error('dimensions of ImageResolution must be a scalar');
-             end
-        end
     end % methods
 
     methods(Access = protected)
-       function image = prender(obj, CameraXOffset, resolution)
+       function image = p_render(this, CameraXOffset, resolution)
             % rendering image on GPU
             % CameraXOffset     offset between 2 cameras
             % resolution        image resolution
             % image             rendered image
 
             % check if all volumes are correctly set
-            validate=[islogical(obj.VolumeReflection), ...
-                      islogical(obj.VolumeAbsorption), ...
-                      islogical(obj.VolumeEmission)];
+            validate=[islogical(this.VolumeReflection), ...
+                      islogical(this.VolumeAbsorption), ...
+                      islogical(this.VolumeEmission)];
                   
-            if (islogical(obj.VolumeIllumination))
+            if (islogical(this.VolumeIllumination))
                 warning('VolumeIllumination is unset. Thus no lightning will be applied!');
             end
                 
@@ -293,35 +252,46 @@ classdef VolumeRender < handle
                 display(validate);
                 error('Not all volumes are properly set!');
             end
-                  
-            scales=[obj.ScaleEmission, obj.ScaleReflection, obj.ScaleAbsorption];
-            props=[CameraXOffset, obj.FocalLength, obj.DistanceToObject];
 
-            validate =  [islogical(obj.VolumeGradientX), ...
-                         islogical(obj.VolumeGradientY), ...
-                         islogical(obj.VolumeGradientZ)];
+            % check if gradient volumes are set properly
+            renderWithgradientVolumes=false;
+            if (not(any([islogical(this.VolumeGradientX), ...
+                         islogical(this.VolumeGradientY), ...
+                         islogical(this.VolumeGradientZ)])))
+                if not(all([isa(this.VolumeGradientX, 'Volume') ...
+                            isa(this.VolumeGradientY, 'Volume') ...
+                            isa(this.VolumeGradientZ, 'Volume')]))
+                    error('All gradient dimensions need to be set and of type Volume!');
+                else
+                    renderWithgradientVolumes=true;
+                end
+            end
 
-            matrix=flip(obj.RotationMatrix);
+            % sync volumes onto the device
+            this.syncVolumes()
+            
+            factors=[this.FactorEmission, this.FactorReflection, this.FactorAbsorption];
+            props=[CameraXOffset, this.FocalLength, this.DistanceToObject];
 
-            if (all(not(validate)))
-                image = volumeRender(obj.LightSources, single(obj.VolumeEmission.Data), ...
-                               single(obj.VolumeReflection.Data), ...
-                               single(obj.VolumeAbsorption.Data), ...
-                               single(obj.VolumeIllumination.Data), single(scales), ...
-                               single(obj.ElementSizeUm), uint32(resolution), ...
+            matrix=flip(this.RotationMatrix);
+
+            if (renderWithgradientVolumes)
+                image = volumeRender('render', this.objectHandle, ...
+                               this.LightSources, ...
+                               this.VolumeIllumination, single(factors), ...
+                               single(this.ElementSizeUm), uint64(resolution), ...
                                single(matrix), single(props), ...
-                               single(obj.OpacityThreshold), single(obj.Color), ...
-                               single(obj.VolumeGradientX.Data), ...
-                               single(obj.VolumeGradientY.Data), ...
-                               single(obj.VolumeGradientZ.Data));
+                               single(this.OpacityThreshold), single(this.Color), ...
+                               this.VolumeGradientX, ...
+                               this.VolumeGradientY, ...
+                               this.VolumeGradientZ);
             else
-                image = volumeRender(obj.LightSources, single(obj.VolumeEmission.Data), ...
-                               single(obj.VolumeReflection.Data), ...
-                               single(obj.VolumeAbsorption.Data), ...
-                               single(obj.VolumeIllumination.Data), single(scales), ...
-                               single(obj.ElementSizeUm), uint32(resolution), ...
+                image = volumeRender('render', this.objectHandle, ...
+                               this.LightSources, ...
+                               this.VolumeIllumination, single(factors), ...
+                               single(this.ElementSizeUm), uint64(resolution), ...
                                single(matrix), single(props), ...
-                               single(obj.OpacityThreshold), single(obj.Color));
+                               single(this.OpacityThreshold), single(this.Color));
             end
        end
     end
@@ -386,3 +356,20 @@ classdef VolumeRender < handle
         end
     end
 end % classdef
+
+% called whenever data of a volume is set/changed
+function propEventHandler(~,eventData)
+    v = ["VolumeEmission", "VolumeAbsorption", "VolumeReflection", ...
+         "VolumeGradientX", "VolumeGradientY", "VolumeGradientZ", ...
+         "VolumeIllumination"];
+    if any(v == eventData.Source.Name)
+        switch eventData.EventName % Get the event name
+        case 'PostSet'
+            % set TimeLastUpdate to the current timestamp if volume
+            if (isa(eventData.AffectedObject.(eventData.Source.Name), 'Volume'))
+                eventData.AffectedObject.(eventData.Source.Name).TimeLastUpdate = timestamp;
+            end
+        end
+    end
+end
+

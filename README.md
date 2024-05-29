@@ -6,31 +6,48 @@ _Volume Renderer <small>for use with MATLAB®</small>_ extends MATLAB® by a GPU
 *   **Generic illumination model:** We developed a generic illumination model that is easy to extend with other illumination functions. The provided function is the Henyey-Greenstein phase function.
 *   **Stereo rendering:** In some use cases there is a nice feature to work with stereo images. Thus, the renderer offers the possibility to render off-axis stereo images.
 *   **High usability:** To enable a high usability a MATLAB® interface consisting of several MATLAB® classes has been developed. Due to this interface it is uncomplicated to generate movies.
+*   **Memory Management:** In order to increase the speed of the renderer, volumes are transferred to the GPU if any change of data occured. This is realized by persisting the memory between all render built upon [this code](https://de.mathworks.com/matlabcentral/fileexchange/38964-example-matlab-class-wrapper-for-a-c-class).
 
 
 ## Requirements
-*   CUDA® capable NVIDIA® graphics device with at least [Kepler™](https://en.wikipedia.org/wiki/Kepler_(microarchitecture)) architecture
-*   Linux computer (64 bit) with installed NVIDIA® driver and CUDA®
-*   MATLAB® <sup id="a1">[1](#f1)</sup> with
+* CUDA® capable NVIDIA® graphics device which is compatible with CUDA 10.2
+* Linux or Windows computer (64 bit) with installed NVIDIA® driver and CUDA® 10.2
+* MATLAB® <sup id="a1">[1](#f1)</sup> with
   * [Image Processing Toolbox](https://www.mathworks.com/products/image.html)
   * [Parallel Computing Tookbox](https://mathworks.com/products/parallel-computing.html) for compilation (requires [mexcuda](https://de.mathworks.com/help/parallel-computing/mexcuda.html))
 
 
 ## Installation
-First download and extract or clone the repository.
-Next, enter the local folder with the render code in matlab. Run the `make.m` file inside `src`. This command will compile all mex-files for the renderer.
-Either, enter `src/matlab` to run code and place your matlab renderer code there, or setup matlab to load this folder at each startup into its search path as described [here](https://de.mathworks.com/help/matlab/matlab_env/add-folders-to-matlab-search-path-at-startup.html) (recommended by us).
+First download and extract or clone the repository. Next, download and install the following tools:
+- [CUDA 10.2](https://developer.nvidia.com/cuda-downloads)
+- [Setup some C compiler](https://de.mathworks.com/support/requirements/supported-compilers.html)
 
+Next, open matlab and navigate to the folder with the render code in matlab. Adjust the CUDA path in `src/make.m` and run it from within `src`. This command will compile all mex-files for the renderer.
+Either, enter `src/matlab` to run code and place your matlab renderer code there, or setup matlab to load this folder at each startup into its search path as described [here](https://de.mathworks.com/help/matlab/matlab_env/add-folders-to-matlab-search-path-at-startup.html) (recommended).
+
+
+## Documentation
+In order to generate a [doxygen documentation](https://doxygen.nl) in html, we offer a `Doxyfile`. Install the tool and run `doxygen Doxyfile`.
+The resulting Documentation will be stored in `docs/doxygen`.
 
 ## Example
-The following video demonstrates the power of the renderer<sup id="a2">[2](#f2)</sup>:
+The following video demonstrates the power of the renderer:
 
 ![Demo CountPages alpha](docs/example_vr_zebra.gif)
 
+### Example Code
+In `src/matlab` are four examples:
+  - `example1.m`: creating a 2D image of a zebrafish embrio dataset
+  - `example1_grad.m`: same as above, but using precomputed gradient volumes instead of on the fly gradient computation
+  - `example2.m`: create a video of the zebrafish embrio
+  - `example3.m`: same as example 2, but using two channels and fading out one side of the average brain of the zebrafish
+
+They all are built upon one dataset from [1]. In order to run the examples mentioned above, one needs to put the required file `ViBE-Z_72hpf_v1.h5` in `examples/h5-data/`. The scripts are setup to be run from anywhere, either with `add path` or change into the directory.
 
 ## License
-- This work is licensed under [GNU Affero General Public License version 3](https://opensource.org/licenses/AGPL-3.0). 
-- Copyright 2020 © [Raphael Scheible](raphiniert.com)
+- The Volume renderer is licensed under [GNU Affero General Public License version 3](https://opensource.org/licenses/AGPL-3.0).
+- The examples are licensed under [MIT](https://opensource.org/licenses/MIT).
+- Copyright 2020-present © [Raphael Scheible](https://raphiniert.com)
 
 ## Acknowledgments
 _Volume Renderer for use with MATLAB®_ was originally developed as a student project by Raphael Scheible at University of Freiburg supervised by [Benjamin Ummenhofer](http://lmb.informatik.uni-freiburg.de/people/ummenhof/) and [apl. Prof. Dr. Olaf Ronneberger](http://lmb.informatik.uni-freiburg.de/people/ronneber/).
@@ -40,5 +57,4 @@ _Volume Renderer for use with MATLAB®_ was originally developed as a student pr
 
 ---
 
-<a id="f1"></a>1: tested and developed under R2019b; might work from R2015b [↩](#a1)  
-<a id="f2"></a>2: provided by Benjamin Ummenhofer, data from <a id="r1">[[1]](#ref1)</a> [↩](#a2)
+<a id="f1"></a>1: tested and developed under R2022a; might work from R2018a [↩](#a1)

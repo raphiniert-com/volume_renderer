@@ -1,0 +1,7 @@
+*.mexw64
+*.asv
+*.h5
+
+docs/doxygen
+
+.vscode/
