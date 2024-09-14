@@ -156,13 +156,13 @@ for i = 1:6
     yticks([targetSize(1)/4:targetSize(1)/2:10*targetSize(1)])
     yticklabels({'0','0.2','0.4','0.6','0.8','1.0'})
 
-    xlabel('scale absorption', 'FontSize', fontSizeLabelAxis);
-    ylabel('scale reflection', 'FontSize', fontSizeLabelAxis);
+    xlabel('k_{ab}', 'FontSize', fontSizeLabelAxis);
+    ylabel('k_{ref}', 'FontSize', fontSizeLabelAxis);
 
     
 
     % make sure that the x and ylabels are in the picture
-    scale = 0.06;
+    scale = 0.10;
     pos = get(gca, 'Position');
     pos(2) = pos(2)+scale*pos(4);
     pos(4) = (1-scale)*pos(4);
