@@ -56,11 +56,6 @@ public:
       */
     Volume& volumeDz = make_volume(NULL, 0, make_cudaExtent(0,0,0));
 
-    /*! \var Volume& volumeLight
-      * \brief volume for the illumination
-      */
-    Volume& volumeLight = make_volume(NULL, 0, make_cudaExtent(0,0,0));
-
     /*! \var cudaArray * ptr_d_volumeEmission
       * \brief 
       */
@@ -86,11 +81,6 @@ public:
       * \brief pointer to the device memory of the volume of gradient in z direction
       */
     cudaArray * ptr_d_volumeDz = 0;
-    
-    /*! \var cudaArray * ptr_d_volumeLight
-      * \brief pointer to the device memory of the volume for the illumination
-      */
-    cudaArray * ptr_d_volumeLight = 0;
 
     /*! \var MManager()
       * \brief minimal constructor
@@ -261,9 +251,6 @@ public:
             << "\n"
             << "\t\tdX (MB): " << this->bytesToMB(this->volumeDz.memory_size)
             << " ptr: " << this->ptr_d_volumeDz
-            << "\n"
-            << "\t\tlight (MB): " << this->bytesToMB(this->volumeLight.memory_size)
-            << " ptr: " << this->ptr_d_volumeLight
             << "\n"
             << "\n"
             << "\t\tSimilarity of Volumes"

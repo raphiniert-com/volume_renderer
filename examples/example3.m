@@ -150,6 +150,8 @@ for i=start_frame:end_frame
     rendered_image = render.render();
     sw.stop('2');
 
+    render.memInfo()
+
     % rotate object
     render.rotate(0,beta,0);
 

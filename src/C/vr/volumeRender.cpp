@@ -45,12 +45,14 @@ size_t iDivUp(size_t a, size_t b) { return (a % b != 0) ? (a / b + 1) : (a / b);
  * 	\brief constructing a LightSource structure
  *  \param pos light position
  *  \param color color intensity of the light
+ *  \param intensity light intensity
  *  \return structure of type LightSource
  */
-LightSource make_lightSource(float3 pos, float3 color) {
+LightSource make_lightSource(float3 pos, float3 color, float intensity) {
   LightSource result;
   result.position = pos;
   result.color = color;
+  result.intensity = intensity;
   return result;
 }
 
@@ -94,7 +96,9 @@ void selectBestDevice() {
                                     const float3& aElementSizeUm,
                                     const float4x3& aRotationMatrix,
                                     const float aOpacityThreshold,
-                                    const cudaExtent& aVolumeSize)
+                                    const cudaExtent& aVolumeSize,
+                                    const float aShininess,
+                                    const float aScatteringWeight)
  * 	\brief computes some properties and selects device on that the render
  computes
  *  \param aWidth width of the rendered image
@@ -107,13 +111,18 @@ void selectBestDevice() {
         last vector: [camera x-offset; focal length; object distance]
  *  \param aOpacityThreshold The opacity threshold of the raycasting
  *  \param aVolumeSize The size/extent of the volume
+ *  \param aShininess shininess factor used by blinn-phong (specular exponent)
+ *  \param aScatteringWeight balancing scattering and reflection
  *  \return RenderOptions struct
  */
 RenderOptions
 initRender(const size_t aWidth, const size_t aHeight, const float aFactorEmission,
            const float aFactorReflection, const float aFactorAbsorption,
            const float3 &aElementSizeUm, const float4x3 &aRotationMatrix,
-           const float aOpacityThreshold, const cudaExtent &aVolumeSize) {
+           const float aOpacityThreshold, const cudaExtent &aVolumeSize,
+           const float aShininess, const float aScatteringWeight, 
+           const float aHgAsymmetry
+          ) {
   RenderOptions result;
   result.image_width = aWidth;
   result.image_height = aHeight;
@@ -149,6 +158,10 @@ initRender(const size_t aWidth, const size_t aHeight, const float aFactorEmissio
   result.factor_reflection = aFactorReflection;
 
   result.opacity_threshold = aOpacityThreshold;
+
+  result.shininess = aShininess;
+  result.scattering_weight = aScatteringWeight;
+  result.hg_asymmetry = aHgAsymmetry;
 
   selectBestDevice();
 

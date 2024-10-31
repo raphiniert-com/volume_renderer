@@ -51,9 +51,11 @@ struct LightSource {
   float3 position;
   /*! The color intensity of the light */
   float3 color;
+  /*! The overall intensity of the light source */
+  float intensity;
 };
 
-LightSource make_lightSource(float3 pos, float3 color);
+LightSource make_lightSource(float3 pos, float3 color, float intensity);
 
 /*! \struct Volume volumeRender.h
  * 	\brief a simple volume
@@ -106,13 +108,21 @@ struct RenderOptions {
   float opacity_threshold;
   /*! The stepsize of the raycasting */
   float tstep;
+  /*! shininess factor used by blinn-phong (specular exponent) */
+  float shininess;
+  /*! balancing scattering and reflection */
+  float scattering_weight;
+  /*! Asymmetry factor \( g \) in the HG phase function */
+  float hg_asymmetry;
 };
 
 RenderOptions
 initRender(const size_t aWidth, const size_t aHeight, const float aFactorEmission,
            const float aFactorReflection, const float aFactorAbsorption,
            const float3 &aElementSizeUm, const float4x3 &aRotationMatrix,
-           const float aOpacityThreshold, const cudaExtent &aVolumeSize);
+           const float aOpacityThreshold, const cudaExtent &aVolumeSize, 
+           const float aShininess, const float aScatteringWeight, 
+           const float aHgAsymmetry);
 
 float *render(const dim3 &block_size, const dim3 &grid_size,
               const RenderOptions &aOptions, const cudaExtent &aVolumeExtent,
@@ -123,8 +133,6 @@ void render_kernel(float *d_output, const dim3 &block_size,
                    const float3 &volume_color, const float3 &aGradientStep);
 
 void copyLightSources(const LightSource *lightSources, const size_t count);
-
-cudaArray * setIlluminationTexture(const Volume &volume, cudaArray * ptr, const uint64_t timeLastMemSync);
 
 void setGradientTextures(const Volume &dx, const Volume &dy, const Volume &dz, 
   cudaArray * &ptr_d_volumeDx, cudaArray * &ptr_d_volumeDy, cudaArray * &ptr_d_volumeDz, const uint64_t timeLastMemSync);

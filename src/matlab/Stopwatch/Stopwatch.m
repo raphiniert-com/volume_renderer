@@ -1,14 +1,46 @@
 classdef Stopwatch < matlab.mixin.Copyable
-    %STOPWATCH class which can be used to analyse code performance
-    %  
-    % dirived from matlab.mixin.Copyable
-    % use as follows:
-    %  sw = Stopwatch('some title');
-    %  sw.add('x', 'benchmark code snippet x');
-    %  sw.start('x');
-    %  % call some code
-    %  sw.stop('x');
-    %  sw.print();
+    % STOPWATCH Class to benchmark and analyze code performance.
+    %   This class is useful for timing and logging code execution in MATLAB.
+    %   By setting up named time slots, you can easily measure the duration
+    %   of different parts of your code and print formatted results.
+    %
+    %   Usage:
+    %     sw = Stopwatch('My Stopwatch');
+    %     sw.add('task1', 'Description of Task 1');
+    %     sw.start('task1');
+    %     % Place code for Task 1 here
+    %     sw.stop('task1');
+    %     sw.print();
+    %
+    % Properties (Private):
+    %   name       - Name of the stopwatch instance.
+    %   tics       - Map container storing start times for each task.
+    %   time       - Map container storing accumulated times for each task.
+    %   caption    - Map container storing task descriptions.
+    %   keys       - Cell array storing task identifiers.
+    %
+    % Methods:
+    %   Stopwatch         - Constructor to initialize a new stopwatch with a specified name.
+    %   add               - Adds a new timing slot with an ID and description.
+    %   start             - Starts timing for the specified slot.
+    %   stop              - Stops timing for the specified slot and accumulates elapsed time.
+    %   getTotal          - Returns the total accumulated time across all slots.
+    %   reset             - Resets the accumulated time for a specific slot.
+    %   print             - Prints a formatted report of all timing slots.
+    %
+    % Usage Notes:
+    %   - Each timing slot has a unique ID used to start, stop, and reset timings.
+    %   - The `print` method outputs results in a readable format, including the total time if more than one slot is present.
+    %
+    % Example:
+    %   sw = Stopwatch('Benchmark');
+    %   sw.add('loop', 'Loop Execution');
+    %   sw.start('loop');
+    %   for i = 1:1000
+    %       % Code to be timed
+    %   end
+    %   sw.stop('loop');
+    %   sw.print();
     
     properties(Access=private)
         name = 'stopwatch';

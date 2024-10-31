@@ -1,13 +1,79 @@
 classdef VolumeRender < handle
-    % For explanation see documentation (pdf)
+    % VOLUMERENDER Class for managing and rendering volumetric data with lighting and material properties.
+    %   This class handles various rendering settings, such as light source properties,
+    %   material factors (emission, reflection, and absorption), and camera parameters.
+    %   The rendering supports stereoscopic output and customizable volume data for realistic
+    %   rendering effects, useful in fields like microscopy and medical imaging.
+    %
+    % Properties:
+    %   FocalLength           - Focal length of the virtual camera.
+    %   DistanceToObject      - Distance from the camera to the object in the scene.
+    %   OpacityThreshold      - Threshold for opacity rendering; values above this are fully opaque.
+    %   LightSources          - Array of light sources influencing the scene lighting.
+    %   Color                 - Base RGB color of the rendered volume.
+    %   FactorEmission        - Emission factor controlling how much light the volume emits.
+    %   FactorReflection      - Reflection factor determining reflective intensity.
+    %   FactorAbsorption      - Absorption factor defining how much light is absorbed by the volume.
+    %   CameraXOffset         - Offset between two cameras for stereoscopic rendering.
+    %   StereoOutput          - Stereo mode for 3D output (e.g., RedCyan anaglyph).
+    %   ElementSizeUm         - Element size in micrometers, representing voxel dimensions.
+    %   RotationMatrix        - Rotation matrix for setting the view orientation.
+    %   ImageResolution       - Resolution of the output image.
+    %   Shininess             - Shininess value for specular highlights in Blinn-Phong shading.
+    %   ScatteringWeight      - Weighting factor between reflection and scattering.
+    %   HgAsymmetry           - Asymmetry parameter for the Henyey-Greenstein scattering phase function.
+    %   TimeLastMemSync       - Timestamp of the last memory synchronization for the volumes.
+    %
+    % Observable Properties:
+    %   VolumeReflection      - Volume data representing reflection characteristics.
+    %   VolumeEmission        - Volume data for emission; represents light-emitting areas.
+    %   VolumeAbsorption      - Volume data for absorption; higher values absorb more light.
+    %   VolumeGradientX       - Volume gradient data in the X direction.
+    %   VolumeGradientY       - Volume gradient data in the Y direction.
+    %   VolumeGradientZ       - Volume gradient data in the Z direction.
+    %
+    % Private Properties:
+    %   objectHandle          - Handle to the underlying C++ memory manager for volume rendering.
+    %
+    % Methods:
+    %   VolumeRender          - Constructor to initialize volume rendering properties and listeners.
+    %   delete                - Destructor to clean up resources.
+    %   syncVolumes           - Synchronizes the volume data with the GPU memory.
+    %   memInfo               - Displays memory usage information.
+    %   memClear              - Clears GPU memory associated with the volume rendering.
+    %   rotate                - Applies a rotation to the view orientation using given angles.
+    %   render                - Renders an image from the volume data with optional stereoscopic effect.
+    %   resetGradientVolumes  - Resets gradient volume properties to switch rendering to gradient mode.
+    %
+    % Static Methods:
+    %   normalizeSequence     - Normalizes a 4D image sequence to values between [0, 1].
+    %   normalizeImage        - Normalizes an RGB image to values between [0, 1] with optional min/max input.
+    %
+    % Usage:
+    %   Create a VolumeRender object, configure light sources, material factors, and other
+    %   properties, and then call the render method to obtain the rendered image.
+    %
+    % Notes:
+    %   - For more detailed documentation, refer to the accompanying documentation PDF.
+    %   - Ensure that volume properties (VolumeReflection, VolumeEmission, etc.) are set with
+    %     compatible data types to prevent rendering errors.
+    %
+    % Example:
+    %   renderer = VolumeRender();
+    %   renderer.FactorEmission = 0.8;
+    %   renderer.Shininess = 50;
+    %   renderer.LightSources = [LightSource(...), LightSource(...)]; % Define light sources
+    %   image = renderer.render();
+    %   imshow(image);
+    
     properties
-        FocalLength(1,1)      = 0.0;
-        DistanceToObject(1,1) = 0.0;
-        OpacityThreshold(1,1) = 0.95;
+        FocalLength(1,1)       = 0.0;
+        DistanceToObject(1,1)  = 0.0;
+        OpacityThreshold(1,1)  = 0.95;
         
-        LightSources(1,:)     = false;
+        LightSources(1,:)      = false;
         
-        Color(1,3)            = [1,1,1];
+        Color(1,3)             = [1,1,1];
  
         FactorEmission(1,1)    = 1.0;
         FactorReflection(1,1)  = 1.0;
@@ -20,6 +86,10 @@ classdef VolumeRender < handle
         RotationMatrix(3,3)   = eye(3);
         ImageResolution(1,2)  = [0,0];
         
+        Shininess(1,1)        = 30.0;
+        ScatteringWeight(1,1) = 0.5;
+        HgAsymmetry(1,1)      = 0.8;
+        
         TimeLastMemSync       = uint64(0);
     end
 
@@ -31,7 +101,6 @@ classdef VolumeRender < handle
         VolumeGradientX       = false;
         VolumeGradientY       = false;
         VolumeGradientZ       = false;
-        VolumeIllumination    = false;
     end
 
     properties (SetAccess = private, Hidden = true)
@@ -47,7 +116,6 @@ classdef VolumeRender < handle
             addlistener(this,'VolumeGradientX','PostSet', @propEventHandler);
             addlistener(this,'VolumeGradientY','PostSet', @propEventHandler);
             addlistener(this,'VolumeGradientZ','PostSet', @propEventHandler);
-            addlistener(this,'VolumeIllumination','PostSet', @propEventHandler);
             
             this.objectHandle = volumeRender('new', varargin{:});
         end
@@ -173,14 +241,6 @@ classdef VolumeRender < handle
             end
         end
         
-        function set.VolumeIllumination(this, val)
-            if (isa(val,'Volume'))
-                this.VolumeIllumination = val;
-            else
-                error('VolumeEmission must be of type Volume');
-            end
-        end
-        
         function set.VolumeEmission(this, val)
             if (isa(val,'Volume'))
                 this.VolumeEmission = val;
@@ -243,10 +303,6 @@ classdef VolumeRender < handle
             validate=[islogical(this.VolumeReflection), ...
                       islogical(this.VolumeAbsorption), ...
                       islogical(this.VolumeEmission)];
-                  
-            if (islogical(this.VolumeIllumination))
-                warning('VolumeIllumination is unset. Thus no lightning will be applied!');
-            end
                 
             if (all(validate))
                 display(validate);
@@ -254,7 +310,6 @@ classdef VolumeRender < handle
             end
 
             % check if gradient volumes are set properly
-            renderWithgradientVolumes=false;
             if (not(any([islogical(this.VolumeGradientX), ...
                          islogical(this.VolumeGradientY), ...
                          islogical(this.VolumeGradientZ)])))
@@ -262,8 +317,6 @@ classdef VolumeRender < handle
                             isa(this.VolumeGradientY, 'Volume') ...
                             isa(this.VolumeGradientZ, 'Volume')]))
                     error('All gradient dimensions need to be set and of type Volume!');
-                else
-                    renderWithgradientVolumes=true;
                 end
             end
 
@@ -275,24 +328,13 @@ classdef VolumeRender < handle
 
             matrix=flip(this.RotationMatrix);
 
-            if (renderWithgradientVolumes)
-                image = volumeRender('render', this.objectHandle, ...
-                               this.LightSources, ...
-                               this.VolumeIllumination, single(factors), ...
-                               single(this.ElementSizeUm), uint64(resolution), ...
-                               single(matrix), single(props), ...
-                               single(this.OpacityThreshold), single(this.Color), ...
-                               this.VolumeGradientX, ...
-                               this.VolumeGradientY, ...
-                               this.VolumeGradientZ);
-            else
-                image = volumeRender('render', this.objectHandle, ...
-                               this.LightSources, ...
-                               this.VolumeIllumination, single(factors), ...
-                               single(this.ElementSizeUm), uint64(resolution), ...
-                               single(matrix), single(props), ...
-                               single(this.OpacityThreshold), single(this.Color));
-            end
+            image = volumeRender('render', this.objectHandle, ...
+                           this.LightSources, single(factors), ...
+                           single(this.ElementSizeUm), uint64(resolution), ...
+                           single(matrix), single(props), ...
+                           single(this.OpacityThreshold), single(this.Color), ...
+                           single(this.Shininess), single(this.ScatteringWeight), ...
+                           single(this.HgAsymmetry));
        end
     end
     

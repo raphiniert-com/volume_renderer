@@ -1,5 +1,39 @@
 classdef Volume < handle
-    %For explanation see documentation (pdf)
+    % VOLUME Class for handling and manipulating volumetric data.
+    %   This class provides methods to perform various operations on volumetric data,
+    %   such as resizing, padding, normalization, and gradient calculation.
+    %   It also supports Maximum Intensity Projection (MIP) and property observation
+    %   to track updates to the volume data.
+    %
+    % Properties:
+    %   Data               - Observable property containing the volumetric data as a 3D array.
+    %                        The data is converted to single precision upon assignment.
+    %   TimeLastUpdate     - Timestamp of the last update to the data, set whenever 'Data' changes.
+    %
+    % Methods:
+    %   Volume             - Constructor to initialize the volume data and set up an observer on 'Data'.
+    %   set.Data           - Setter method to enforce single-precision format for the data property.
+    %   resize             - Resizes the volumetric data to a new size.
+    %   size               - Returns the current size of the data array.
+    %   pad                - Pads the volumetric data with a specified value around the edges.
+    %   mip                - Computes a Maximum Intensity Projection (MIP) along the z-axis.
+    %   mean               - Calculates the mean value of all elements in the data array.
+    %   max                - Returns the maximum value within the data array.
+    %   min                - Returns the minimum value within the data array.
+    %   grad               - Computes the gradient of the volume in x, y, and z directions.
+    %                        Optionally, the gradients can be resized to a specified size.
+    %   normalize          - Performs linear normalization of the data to a specified range.
+    %
+    % Example:
+    %   volData = rand(50, 50, 50);  % Generate random 3D data
+    %   volume = Volume(volData);    % Create a Volume object
+    %   volume.resize([100, 100, 100]); % Resize the volume
+    %   mipImage = volume.mip();     % Compute a Maximum Intensity Projection (MIP)
+    %   avgIntensity = volume.mean(); % Get the mean intensity of the volume
+    %
+    % Notes:
+    %   - For more detailed information, refer to the accompanying documentation PDF.
+    %   - The 'Data' property is observable; changes to it trigger an update to 'TimeLastUpdate'.
     
     properties(SetObservable)
         Data=[];

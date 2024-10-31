@@ -31,9 +31,10 @@ emission_structure = Volume(data_structure);
 % create render object
 render = VolumeRender();
 
+render.ScatteringWeight = 1;
+
 % setup illumination settings
-render.VolumeIllumination=Volume(HenyeyGreenstein(64));
-render.LightSources = [LightSource([500,1000,550],[0,1,1]), LightSource([0,550,90],[1,0.5,1])];
+render.LightSources = [LightSource([0,0.1,0],[1,1,1], LightType.Diffuse)];
 % misc parameters
 render.ElementSizeUm=elementSizeUm;
 render.FocalLength=3.0;
@@ -69,9 +70,9 @@ absorptionVolume.normalize(0,1);
 render.VolumeEmission=emission_main;
 render.VolumeAbsorption=absorptionVolume;
 % make it kind of transparent
-render.FactorEmission=0.1;
+render.FactorEmission=1;
 render.FactorAbsorption=0.4;
-render.FactorReflection=0.1;
+render.FactorReflection=0.6;
 render.Color = [1,1,1];
 
 sw.start('r');
@@ -82,4 +83,4 @@ sw.print();
 
 %% display the images and the combined one
 figure;
-imshow(rendered_image_main+rendered_image_structure);
+imshow(im2double(rendered_image_main+rendered_image_structure));

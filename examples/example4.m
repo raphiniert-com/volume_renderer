@@ -75,6 +75,8 @@ rendered_images_main = zeros([  size(emission_structure.Data,2), ...
 render = VolumeRender();
 
 % setup render options
+render.Shininess = 30;
+render.ScatteringWeight = 0.5;
 render.Color = [1,1,1];
 
 render.FactorEmission=1;
@@ -103,7 +105,7 @@ absorptionVolume=emission_main;
 render.VolumeAbsorption=absorptionVolume;
 render.VolumeEmission=emission_main;
 
-render.VolumeIllumination=Volume(HenyeyGreenstein(64));
+render.VolumeScattering=Volume(HenyeyGreenstein_MATLAB(512));
 
 % setup image size (of the resulting 2D image)
 render.ImageResolution=size(emission_main.Data,[1 2]);
@@ -241,7 +243,7 @@ rendered_images_combined = rendered_images_main+rendered_images_structure;
 
 normalized_images = VolumeRender.normalizeSequence(rendered_images_combined);
 
-mov = immovie(imcomplement(normalized_images));
+mov = immovie(normalized_images);
 implay(mov, 15);
 
 % save to file

@@ -38,7 +38,7 @@ float3 make_float3Inv(float *aPointer) {
 
 
 
-#define MIN_ARGS 11
+#define MIN_ARGS 13
 
 /*! \fn void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray prhs[] ) 
  *  \brief connects matlab with the renderer
@@ -136,18 +136,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     if (nlhs > 1)
       mexErrMsgTxt("Too many output arguments.");
 
-    if (nrhs < MIN_ARGS)
+    if (nrhs < MIN_ARGS) {
       mexErrMsgTxt("insufficient parameter!");
+      mexPrintf("   %s of %s\n", nrhs, MIN_ARGS);
+    }
 
     const mxArray *mxLightSources = prhs[2];
-    const mxArray *mxVolumeLight = prhs[3];
 
-    if (!(mxIsClass(mxLightSources, "logical") ||
-          mxIsClass(mxVolumeLight, "logical"))) {
+    if (!mxIsClass(mxLightSources, "logical")) {
       // get size num lights
       const size_t numLightSources = mxGetN(mxLightSources);
-      const Volume volumeLight = mxMake_volume(mxVolumeLight);
-        mmanager_instance->volumeLight = mxMake_volume(mxVolumeLight);
 
   #ifdef DEBUG
       mexPrintf("Setting up %d Lightsources\n", numLightSources);
@@ -163,9 +161,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
             (float *)mxGetPr(mxGetProperty(mxLightSources, l, "Color"));
         float *mxLightPosition =
             (float *)mxGetPr(mxGetProperty(mxLightSources, l, "Position"));
+        float lightIntensity = (float)mxGetScalar(mxGetProperty(mxLightSources, l, "Intensity"));
 
         lightSources[l] = make_lightSource(make_float3Inv(mxLightPosition),
-                                          make_float3(mxLightColor));
+                                          make_float3(mxLightColor), lightIntensity);
 
   #ifdef DEBUG
         mexPrintf("\t#%d:\tPosition: %f %f %f, \n\t\tColor: %f %f %f\n", l + 1,
@@ -176,26 +175,21 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       }
 
       // compute required RAM
-      requiredRAM += volumeLight.memory_size + 
-                        (numLightSources * sizeof(LightSource));
+      requiredRAM += (numLightSources * sizeof(LightSource));
 
       // check if GPU has enough space for the LightVolume
       mm::MManager::checkFreeDeviceMemory(requiredRAM);
 
       // copy to GPU
       copyLightSources(lightSources, numLightSources);
-      mmanager_instance->ptr_d_volumeLight = 
-        setIlluminationTexture(volumeLight,
-          mmanager_instance->ptr_d_volumeLight,
-          mmanager_instance->timeLastMemSync);
     }
 
 
-    const float *factors = reinterpret_cast<float *>(mxGetPr(prhs[4]));
-    const float3 elementSizeUm = make_float3Inv((float *)mxGetPr(prhs[5]));
-    const size_t *imageResolution = reinterpret_cast<size_t *>(mxGetPr(prhs[6]));
-    const float *ptrRotationMatrix = reinterpret_cast<float *>(mxGetPr(prhs[7]));
-    const float *properties = (float *)mxGetPr(prhs[8]);
+    const float *factors = reinterpret_cast<float *>(mxGetPr(prhs[3]));
+    const float3 elementSizeUm = make_float3Inv((float *)mxGetPr(prhs[4]));
+    const size_t *imageResolution = reinterpret_cast<size_t *>(mxGetPr(prhs[5]));
+    const float *ptrRotationMatrix = reinterpret_cast<float *>(mxGetPr(prhs[6]));
+    const float *properties = (float *)mxGetPr(prhs[7]);
 
   #ifdef DEBUG
     mexPrintf("Resolution: %dx%d\n", imageResolution[1], imageResolution[0]);
@@ -231,18 +225,22 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
               rotationMatrix.m[2].z);
   #endif
 
-    const float opacityThreshold = (float)mxGetScalar(prhs[9]);
+    const float opacityThreshold = (float)mxGetScalar(prhs[8]);
 
     dim3 block_size = dim3(16, 16);
     dim3 grid_size = dim3(vr::iDivUp(imageResolution[1], block_size.x),
                           vr::iDivUp(imageResolution[0], block_size.y));
 
-    const float3 color = make_float3((float *)mxGetPr(prhs[10]));
+    const float3 color = make_float3((float *)mxGetPr(prhs[9]));
+    const float shininess = (float)mxGetScalar(prhs[10]);
+    const float scattering_weight = (float)mxGetScalar(prhs[11]);
+    const float hg_asymmetry = (float)mxGetScalar(prhs[12]);
 
     RenderOptions options =
         initRender(imageResolution[1], imageResolution[0], factors[0], factors[1],
                   factors[2], elementSizeUm, rotationMatrix, opacityThreshold,
-                  mmanager_instance->volumeEmission.extent);
+                  mmanager_instance->volumeEmission.extent, shininess, scattering_weight,
+                  hg_asymmetry);
 
     // switch
     mwSize dim[3] = {imageResolution[0], imageResolution[1], 3};
@@ -254,6 +252,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     mexPrintf("height: %lu\n", options.image_height);
     mexPrintf("width: %lu\n", options.image_width);
     mexPrintf("opacity: %f\n", options.opacity_threshold);
+    mexPrintf("shininess: %f\n", options.shininess);
+    mexPrintf("scattering weight: %f\n", options.scattering_weight);
+    mexPrintf("hg asymmetry: %f\n", options.hg_asymmetry);
 #endif
 
     float *result = render(block_size, grid_size, options, mmanager_instance->volumeEmission.extent, color);

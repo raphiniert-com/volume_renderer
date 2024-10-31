@@ -19,6 +19,9 @@
 
 #define ONE_OVER_2PI ((float)0.1591549430918953357688837633725143620344596457404564)
 #define PI2 ((float)6.2831853071795864769252867665590057683943387987502116)
+#define ONE_OVER_PI ((float)0.3183098861837906715377675267450287240689192914809129)
+#define PI ((float)3.1415926535897932384626433832795028841971693993751058)
+
 
 /*! \var typedef unsigned int uint
  * 	\brief defines abbrev for unsigned int: uint
@@ -115,13 +118,8 @@ texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType> tex_abso
  */
 texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType> tex_reflection;
 
-/*! \var texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType> tex_illumination 
- *  \brief 3D texture for illumination lookup
- */
-texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType> tex_illumination;
-
 /*! \var __device__ texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType> getTexture(vr::VolumeType aType)
- *  \brief 3D texture for illumination lookup
+ *  \brief function for 3D texture lookup
  *  \param aType volume type id from type vr::VolumeType
  *  \return texture given an id
  */
@@ -284,71 +282,88 @@ __device__ float3 lookupGradient(const float3 aSamplePosition,
  */
 __forceinline__ __device__ float angle(const float3 &a, const float3 &b) {
   // radian to degree
-  return acos(dot(a, b) / (length(a) + length(b)));
+  float dotProd = dot(a, b) / (length(a) * length(b));
+  dotProd = fminf(1.0f, fmaxf(-1.0f, dotProd)); // Clamp within [-1, 1]
+  return acosf(dotProd);
 }
 
-/*! \fn float3 shade(const float3& aSamplePosition, const float3 aPosition,
-                     const float3 aGradientStep, const float3 aViewPosition,
-                     const float3 aColor, vr::LightSource * aLightSources, 
-                     const float aFactorReflection, const float3 aBoxmin, 
-                     const float3 aBoxmax, const float3 aBoxScale)
- *  \brief determines the light performed at a voxelposition of all defined lightsources
- * 			   depending on the undelying illumination texture/model
- *  \param aSamplePosition
- *  \param aPosition
- * 	\param aGradientStep step size to a neighbor voxel
- * 	\param aViewPosition position of the viewer
- * 	\param aColor the color the rendered volume absorbs
- * 	\param aLightSources pointer to all light sources
- * 	\param aFactorReflection factors the sampled value of reflection
- * 	\param aBoxmin min extents of the intersection box
- * 	\param aBoxmin max extents of the intersection box
- * 	\param aBoxScale 1 devided by size of the box
- *  \return voxel value
+/*! \fn float3 shade(const float3 &aSamplePosition, const float3 &aPosition, 
+                     const float3 &aViewPosition, const float3 &aColor, 
+                     vr::LightSource *aLightSources, const float aFactorReflection, 
+                     const float3 &surfaceNormal, const float aShininess, 
+                     const float aScatteringWeight, const float aHgAsymmetry)
+ *  \brief Calculates the illumination at a voxel position based on multiple light sources,
+ *         using both Blinn-Phong reflection and Henyey-Greenstein scattering for realism.
+ *
+ *  This function computes the shading at a specified voxel position by combining the effects
+ *  of Blinn-Phong reflection and Henyey-Greenstein (HG) scattering. It evaluates each light 
+ *  source's contribution by calculating diffuse and specular reflection from Blinn-Phong, 
+ *  as well as single scattering using the HG phase function. Light fall-off due to distance 
+ *  is incorporated using the inverse-square law. A weighting factor controls the balance 
+ *  between reflection and scattering.
+ *
+ *  \param aSamplePosition 3D position of the sample within the volume, used for texture sampling.
+ *  \param aPosition 3D position of the voxel within the scene.
+ *  \param aViewPosition 3D position of the viewer or camera.
+ *  \param aColor Color of the volume at the voxel, representing its absorption characteristics.
+ *  \param aLightSources Pointer to an array of light sources influencing the voxel.
+ *  \param aFactorReflection Reflection factor applied to the sampled reflection texture value.
+ *  \param surfaceNormal Surface normal at the voxel position, precomputed for efficient shading.
+ *  \param aShininess Shininess exponent for the Blinn-Phong model, controlling the highlight size.
+ *  \param aScatteringWeight Weight between Blinn-Phong reflection and HG scattering components,
+ *                           where 0 indicates full reflection and 1 indicates full scattering.
+ *  \param aHgAsymmetry Asymmetry factor \( g \) in the HG phase function, controlling forward vs.
+ *                      backward scattering characteristics.
+ * 
+ *  \return Computed color at the voxel based on illumination, reflection, and scattering.
  */
-__device__ float3 shade(const float3 &aSamplePosition, const float3 aPosition,
-                        const float3 aGradientStep, const float3 aViewPosition,
-                        const float3 aColor, vr::LightSource *aLightSources,
-                        const float aFactorReflection, const float3 aBoxmin,
-                        const float3 aBoxmax, const float3 aBoxScale) {
+__device__ float3 shade(const float3 &aSamplePosition, const float3 &aPosition, 
+                        const float3 &aViewPosition, const float3 &aColor, 
+                        vr::LightSource *aLightSources, const float aFactorReflection, 
+                        const float3 &surfaceNormal, const float aShininess, 
+                        const float aScatteringWeight, const float aHgAsymmetry) {
   const float factorReflection = aFactorReflection;
-
-  // negativ gradient approx surface normal
-  const float3 surfaceNormal =
-      -1 * normalize((gradient_functions[dc_activeGradientMethod])(
-               aSamplePosition, aPosition, aGradientStep, aBoxmin, aBoxmax,
-               aBoxScale));
-
-  float3 result = make_float3(0.f);
+  float3 result = make_float3(0.0f);
 
   for (size_t i = 0; i < c_numLightSources; ++i) {
     vr::LightSource lightSource = aLightSources[i];
 
-    // calculation of angles
-    float3 lightPosition = (lightSource.position);
-    float alpha = angle(surfaceNormal, lightPosition) / PI2 *
-                  ONE_OVER_2PI; // normalizing to [0,1]
-    float beta = angle(surfaceNormal, aViewPosition) / PI2 * ONE_OVER_2PI;
+    // Calculate light direction and distance
+    float3 lightDir = lightSource.position - aPosition;
+    float lightDistanceSquared = dot(lightDir, lightDir);
+    lightDir = normalize(lightDir);
 
-    float3 lightOut = (lightPosition - aPosition);
-    float3 lightIn = (aViewPosition - aPosition);
+    // Apply attenuation unless intensity is -1 (indicating diffuse lighting)
+    float attenuation = (lightSource.intensity == -1) ? 1.0f : lightSource.intensity / (lightDistanceSquared + 1e-6f);
 
-    // dot( , ) here: scalar projection of lightOut/lightIn onto surfaceNormal
-    float3 lightOutProj =
-        lightPosition - (dot(lightOut, surfaceNormal) * surfaceNormal);
-    float3 lightInProj =
-        aViewPosition - (dot(lightIn, surfaceNormal) * surfaceNormal);
-    float gamma = angle(lightInProj, lightOutProj) * ONE_OVER_2PI;
+    // Calculate view direction and half-vector for Blinn-Phong
+    float3 viewDir = normalize(aViewPosition - aPosition);
+    float3 halfVector = normalize(lightDir + viewDir);
 
-    // lookup in tex_reflection
-    float reflection =
-        factorReflection * tex3D(getTexture(d_idxReflection), aSamplePosition.x,
-                                aSamplePosition.y, aSamplePosition.z);
+    // Blinn-Phong Diffuse and Specular Components
+    float diffuseFactor = max(dot(surfaceNormal, lightDir), 0.0f);
+    float specularFactor = pow(max(dot(surfaceNormal, halfVector), 0.0f), aShininess);
 
-    float light = tex3D(tex_illumination, alpha, beta, gamma);
+    float3 diffuseComponent = diffuseFactor * lightSource.color * aColor;
+    float3 specularComponent = specularFactor * lightSource.color;
 
-    // consider light absorption (color of material)
-    result += reflection * light * lightSource.color * aColor;
+    // Henyey-Greenstein Phase Function for Scattering
+    float cosTheta = dot(viewDir, lightDir);
+    cosTheta = fminf(1.0f, fmaxf(-1.0f, cosTheta));  // Clamp to [-1, 1]
+    float hgPhase = (1.0f / (4.0f * PI)) * ((1.0f - aHgAsymmetry * aHgAsymmetry) /
+                    powf(1.0f + aHgAsymmetry * aHgAsymmetry - 2.0f * aHgAsymmetry * cosTheta, 1.5f));
+
+    // Scattering component based on HG phase function
+    float3 scatteringComponent = aScatteringWeight * hgPhase * lightSource.color * aColor;
+
+    // Reflection texture lookup
+    float reflection = factorReflection * tex3D(tex_reflection, aSamplePosition.x, aSamplePosition.y, aSamplePosition.z);
+
+    // Combine Blinn-Phong reflection with reflection texture and HG scattering
+    float3 reflectionComponent = (1.0f - aScatteringWeight) * (diffuseComponent + specularComponent) * reflection;
+
+    // Accumulate the result for all light sources with attenuation applied at the end
+    result += (scatteringComponent + reflectionComponent) * attenuation;
   }
 
   return result;
@@ -461,9 +476,16 @@ __global__ void d_render(float *d_aOutput, const vr::RenderOptions aOptions,
     float ds = tstep;
     float3 colored = sample * ds * aColor;
 
+    // Calculate surface normal based on the gradient
+    const float3 surfaceNormal =
+      -1 * normalize((gradient_functions[dc_activeGradientMethod])(
+               pos_sample, pos, aGradientStep, boxMin, boxMax, boxScale));
+
+    // compute pixel value
     float3 illumination =
-        shade(pos_sample, pos, aGradientStep, eyeRay.origin, aColor,
-              lightSources, factorReflection, boxMin, boxMax, boxScale);
+        shade(pos_sample, pos, eyeRay.origin, aColor,
+              lightSources, factorReflection, surfaceNormal,
+              aOptions.shininess, aOptions.scattering_weight, aOptions.hg_asymmetry);
 
     float3 illuminated = colored + illumination;
 
@@ -671,23 +693,6 @@ cudaArray * syncVolume(
   d_aArray = createTextureFromVolume(aTexture, aVolume, d_aArray, aAllocateMemory);
 
   return d_aArray;
-}
-
-/*! \fn cudaArray* setIlluminationTexture(const Volume &aVolume, 
-                                          cudaArray * d_aIllumination, 
-                                          const uint64_t aTimeLastMemSync)
- *  \brief copies illumination volume from host to device
- *  \param aVolume illumination volume
- *  \param d_aIllumination array pointing to the device memory
- *  \param aTimeLastMemSync timestamp on which the last rendering took place
- */
-cudaArray * setIlluminationTexture(const Volume &aVolume, 
-                                   cudaArray * d_aIllumination, 
-                                   const uint64_t aTimeLastMemSync) {
-
-  bool allocateMemory = (aVolume.last_update > aTimeLastMemSync) || (aTimeLastMemSync == 0);
-  
-  return syncVolume(tex_illumination, d_aIllumination, aVolume, allocateMemory);
 }
 
 /*! \fn setGradientTextures(const Volume &aDx, 
