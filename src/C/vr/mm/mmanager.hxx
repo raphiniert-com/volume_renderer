@@ -82,6 +82,11 @@ public:
       */
     cudaArray * ptr_d_volumeDz = 0;
 
+    /*! \var cudaArray * ptr_d_volumePhase
+      * \brief pointer to the device memory of the volume for the scatter function LUT
+      */
+    cudaArray * ptr_d_volumePhase = 0;
+
     /*! \var MManager()
       * \brief minimal constructor
       */

@@ -38,7 +38,7 @@ float3 make_float3Inv(float *aPointer) {
 
 
 
-#define MIN_ARGS 13
+#define MIN_ARGS 14
 
 /*! \fn void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray prhs[] ) 
  *  \brief connects matlab with the renderer
@@ -99,7 +99,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
 
     // assign gradient_function
-    vr::GradientMethod tmp = gradientCompute;
+    vr::GradientMethod gm = gradientCompute;
 
     // gradient volume is given
     if (nrhs == 9) {
@@ -107,7 +107,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       mmanager_instance->volumeDy = mxMake_volume(prhs[7]);
       mmanager_instance->volumeDz = mxMake_volume(prhs[8]);
 
-      tmp = gradientLookup;
+      gm = gradientLookup;
     } else if(nrhs == 6) {
       mmanager_instance->resetGradients();
     }
@@ -118,7 +118,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     // check if GPU has enough space
     mm::MManager::checkFreeDeviceMemory(requiredRAM);
 
-    setGradientMethod(tmp);
+    setGradientMethod(gm);
     mmanager_instance->sync();
 
     // Warn if other commands were ignored
@@ -184,12 +184,25 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       copyLightSources(lightSources, numLightSources);
     }
 
+    // assign phase_function
+    vr::PhaseMethod sm = phaseCompute;
 
-    const float *factors = reinterpret_cast<float *>(mxGetPr(prhs[3]));
-    const float3 elementSizeUm = make_float3Inv((float *)mxGetPr(prhs[4]));
-    const size_t *imageResolution = reinterpret_cast<size_t *>(mxGetPr(prhs[5]));
-    const float *ptrRotationMatrix = reinterpret_cast<float *>(mxGetPr(prhs[6]));
-    const float *properties = (float *)mxGetPr(prhs[7]);
+    const mxArray *mxVolumePhase = prhs[3];
+    if (!mxIsClass(mxVolumePhase, "logical")) {
+      const Volume volumePhase = mxMake_volume(mxVolumePhase);
+      mmanager_instance->ptr_d_volumePhase = setPhaseTexture(volumePhase, 
+                                                mmanager_instance->ptr_d_volumePhase,
+                                                mmanager_instance->timeLastMemSync);
+
+      sm = phaseLookup;
+    }
+    setPhaseMethod(sm);
+
+    const float *factors = reinterpret_cast<float *>(mxGetPr(prhs[4]));
+    const float3 elementSizeUm = make_float3Inv((float *)mxGetPr(prhs[5]));
+    const size_t *imageResolution = reinterpret_cast<size_t *>(mxGetPr(prhs[6]));
+    const float *ptrRotationMatrix = reinterpret_cast<float *>(mxGetPr(prhs[7]));
+    const float *properties = (float *)mxGetPr(prhs[8]);
 
   #ifdef DEBUG
     mexPrintf("Resolution: %dx%d\n", imageResolution[1], imageResolution[0]);
@@ -225,16 +238,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
               rotationMatrix.m[2].z);
   #endif
 
-    const float opacityThreshold = (float)mxGetScalar(prhs[8]);
+    const float opacityThreshold = (float)mxGetScalar(prhs[9]);
 
     dim3 block_size = dim3(16, 16);
     dim3 grid_size = dim3(vr::iDivUp(imageResolution[1], block_size.x),
                           vr::iDivUp(imageResolution[0], block_size.y));
 
-    const float3 color = make_float3((float *)mxGetPr(prhs[9]));
-    const float shininess = (float)mxGetScalar(prhs[10]);
-    const float scattering_weight = (float)mxGetScalar(prhs[11]);
-    const float hg_asymmetry = (float)mxGetScalar(prhs[12]);
+    const float3 color = make_float3((float *)mxGetPr(prhs[10]));
+    const float shininess = (float)mxGetScalar(prhs[11]);
+    const float scattering_weight = (float)mxGetScalar(prhs[12]);
+    const float hg_asymmetry = (float)mxGetScalar(prhs[13]);
 
     RenderOptions options =
         initRender(imageResolution[1], imageResolution[0], factors[0], factors[1],

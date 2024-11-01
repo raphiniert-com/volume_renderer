@@ -35,6 +35,8 @@ render.ScatteringWeight = 1;
 
 % setup illumination settings
 render.LightSources = [LightSource([0,0.1,0],[1,1,1], LightType.Diffuse)];
+% render.VolumePhase = Volume(HenyeyGreenstein_LUT(64));
+
 % misc parameters
 render.ElementSizeUm=elementSizeUm;
 render.FocalLength=3.0;

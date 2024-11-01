@@ -33,30 +33,50 @@ typedef unsigned int uint;
  */
 typedef unsigned char uchar;
 
-/*! \var typedef float3 (*gradientFunction)(const float3, const float3,
- * 				const float3, const float3, const float3, const float3) 
+/*! \var typedef float3 (*gradientFunction)(const float3&, const float3&,
+ * 				const float3&, const float3&, const float3&, const float3&) 
  *  \brief function pointer to gradientFunction that returns a gradient
  */
-typedef float3 (*gradientFunction)(const float3, const float3, const float3,
-                                   const float3, const float3, const float3);
+typedef float3 (*gradientFunction)(const float3&, const float3&, const float3&,
+                                   const float3&, const float3&, const float3&);
+
+/*! \var typedef float (*phaseFunction)(const float3&, const float3&, float) 
+ *  \brief function pointer to a scatter function that calculates or looks up
+ *         the scattering intensity based on light direction, view direction, 
+ *         and an asymmetry factor.
+ */
+typedef float (*phaseFunction)(const float3&, const float3&, float);                                   
 
 // forward declaration
-__device__ float3 computeGradient(const float3, const float3, const float3,
-                                  const float3, const float3, const float3);
+__device__ float3 computeGradient(const float3&, const float3&, const float3&,
+                                  const float3&, const float3&, const float3&);
 
-__device__ float3 lookupGradient(const float3, const float3, const float3,
-                                 const float3, const float3, const float3);
+__device__ float3 lookupGradient(const float3&, const float3&, const float3&,
+                                 const float3&, const float3&, const float3&);
+
+__device__ float computeHG(const float3&, const float3&, float);
+
+__device__ float lookupPhase(const float3&, const float3&, float);
 
 /*! \var __device__ gradientFunction gradient_functions[2] = { computeGradient, lookupGradient }; 
- *  \brief Contains function pointer of possible lookup functions
+ *  \brief Contains function pointer of possible gradient retrieval functions
  */
-__device__ gradientFunction gradient_functions[2] = {computeGradient,
-                                                     lookupGradient};
+__device__ gradientFunction gradient_functions[2] = { computeGradient, lookupGradient };
+
+/*! \var __device__ gradientFunction phase_functions[2] = { computeHG, lookupPhase }; 
+ *  \brief Contains function pointer of possible scattering retrieval functions
+ */
+__device__ phaseFunction phase_functions[2] = { computeHG, lookupPhase };
 
 /*! \var __device__ __constant__ GradientMethod dc_activeGradientMethod
  * 	\brief current chosen gradient Method. Default value is gradientCompute.
  */
 __device__ __constant__ vr::GradientMethod dc_activeGradientMethod = vr::gradientCompute;
+
+/*! \var __device__ __constant__ GradientMethod dc_activePhaseMethod
+ * 	\brief current chosen phase Method. Default value is phaseCompute.
+ */
+__device__ __constant__ vr::PhaseMethod dc_activePhaseMethod = vr::phaseCompute;
 
 /*! \var vr::LightSource *d_lightSources
  * 	\brief device array of lightsources
@@ -72,6 +92,12 @@ __device__ __constant__ size_t c_numLightSources;
  * 	\brief channel desc for textures
  */
 const cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<vr::VolumeDataType>();
+
+
+/*! \var texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType> tex_phase 
+ *  \brief 3D texture for phase function lookup
+ */
+texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType> tex_phase;
 
 /*! \var __device__ vr::VolumeType d_idxEmmission
  * 	\brief id for the emission texture
@@ -208,10 +234,10 @@ __forceinline__ __device__ int intersectBox(vr::Ray aRay, float3 aBoxmin,
  * 	\param aBoxScale 1 devided by size of the box
  * 	\return gradient
  */
-__device__ float3 computeGradient(const float3 aSamplePosition,
-                                  const float3 aPosition, const float3 aStep,
-                                  const float3 aBoxmin, const float3 aBoxmax,
-                                  const float3 aBoxScale) {
+__device__ float3 computeGradient(const float3& aSamplePosition,
+                                  const float3& aPosition, const float3& aStep,
+                                  const float3& aBoxmin, const float3& aBoxmax,
+                                  const float3& aBoxScale) {
   float3 gradient;
   float3 samplePosition1, samplePosition2;
 
@@ -262,16 +288,63 @@ __device__ float3 computeGradient(const float3 aSamplePosition,
  * 	\param aBoxScale 1 devided by size of the box [unused]
  * 	\return gradient
  */
-__device__ float3 lookupGradient(const float3 aSamplePosition,
-                                 const float3 aPosition, const float3 aStep,
-                                 const float3 aBoxmin, const float3 aBoxmax,
-                                 const float3 aBoxScale) {
+__device__ float3 lookupGradient(const float3& aSamplePosition,
+                                 const float3& aPosition, const float3& aStep,
+                                 const float3& aBoxmin, const float3& aBoxmax,
+                                 const float3& aBoxScale) {
   return make_float3(tex3D(tex_gradientX, aSamplePosition.x, aSamplePosition.y,
                            aSamplePosition.z),
                      tex3D(tex_gradientY, aSamplePosition.x, aSamplePosition.y,
                            aSamplePosition.z),
                      tex3D(tex_gradientZ, aSamplePosition.x, aSamplePosition.y,
                            aSamplePosition.z));
+}
+
+/**
+ * @brief Computes the Henyey-Greenstein phase function directly.
+ * 
+ * @param lightDir Normalized direction of the light relative to the voxel.
+ * @param viewDir  Normalized direction from the voxel to the viewer or camera.
+ * @param g        Asymmetry factor for the HG phase function.
+ * @return Computed HG phase function value.
+ */
+__device__ float computeHG(const float3 &lightDir, const float3 &viewDir, float g) {
+    // Calculate cosTheta, the angle between light and view directions
+    float cosTheta = dot(lightDir, viewDir);
+    cosTheta = fminf(1.0f, fmaxf(-1.0f, cosTheta));
+
+    // Henyey-Greenstein phase function calculation
+    float gSquared = g * g;
+    float numerator = 1.0f - gSquared;
+    float denominator = powf(1.0f + gSquared - 2.0f * g * cosTheta, 1.5f);
+    return (1.0f / (4.0f * PI)) * (numerator / denominator);
+}
+
+/**
+ * @brief Looks up a precomputed HG phase function value from a 3D texture.
+ * 
+ * @param lightDir Normalized direction of the light relative to the voxel.
+ * @param viewDir  Normalized direction from the voxel to the viewer or camera.
+ * @param g        Asymmetry factor parameter (unused in lookup).
+ * @return Precomputed HG phase function value from the texture.
+ */
+__device__ float lookupPhase(const float3 &lightDir, const float3 &viewDir, float g) {
+    // Calculate angles alpha, beta, and gamma
+    float alpha = acosf(lightDir.z);  // Angle between lightDir and z-axis
+    float beta = acosf(viewDir.z);    // Angle between viewDir and z-axis
+    
+    // Calculate the rotation angle gamma between light and view directions in the x-y plane
+    float3 lightDirXY = make_float3(lightDir.x, lightDir.y, 0.0f);  // Project lightDir onto x-y plane
+    float3 viewDirXY = make_float3(viewDir.x, viewDir.y, 0.0f);     // Project viewDir onto x-y plane
+    float gamma = acosf(dot(lightDirXY, viewDirXY) / (length(lightDirXY) * length(viewDirXY)));
+
+    // Normalize angles to range [0, 1]
+    float alphaNorm = alpha / PI;
+    float betaNorm = beta / PI;
+    float gammaNorm = gamma / (2.0f * PI);
+
+    // Perform texture lookup
+    return tex3D<float>(tex_phase, alphaNorm, betaNorm, gammaNorm);
 }
 
 /*! \fn float angle(const float3& a, const float3& b)
@@ -347,14 +420,12 @@ __device__ float3 shade(const float3 &aSamplePosition, const float3 &aPosition,
     float3 diffuseComponent = diffuseFactor * lightSource.color * aColor;
     float3 specularComponent = specularFactor * lightSource.color;
 
-    // Henyey-Greenstein Phase Function for Scattering
-    float cosTheta = dot(viewDir, lightDir);
-    cosTheta = fminf(1.0f, fmaxf(-1.0f, cosTheta));  // Clamp to [-1, 1]
-    float hgPhase = (1.0f / (4.0f * PI)) * ((1.0f - aHgAsymmetry * aHgAsymmetry) /
-                    powf(1.0f + aHgAsymmetry * aHgAsymmetry - 2.0f * aHgAsymmetry * cosTheta, 1.5f));
+    // This line dynamically calls the appropriate phase function (either computeHG or lookupPhase)
+    // based on the active phase method
+    float phase = (phase_functions[dc_activePhaseMethod])(lightDir, viewDir, aHgAsymmetry);
 
-    // Scattering component based on HG phase function
-    float3 scatteringComponent = aScatteringWeight * hgPhase * lightSource.color * aColor;
+    // Scattering component based on phase function
+    float3 scatteringComponent = aScatteringWeight * phase * lightSource.color * aColor;
 
     // Reflection texture lookup
     float reflection = factorReflection * tex3D(tex_reflection, aSamplePosition.x, aSamplePosition.y, aSamplePosition.z);
@@ -642,6 +713,16 @@ void setGradientMethod(const vr::GradientMethod aMethod) {
   );
 }
 
+/*! \fn void setPhaseMethod(const vr::PhaseMethod)
+ *  \brief set scatter method for rendering
+ *  \param aMethod specifies the scattering method to use (e.g., compute or lookup)
+ */
+void setPhaseMethod(const vr::PhaseMethod aMethod) {
+    HANDLE_ERROR(
+        cudaMemcpyToSymbol(dc_activePhaseMethod, &aMethod, sizeof(enum vr::PhaseMethod))
+    );
+}
+
 /*! \fn cudaArray * referenceTexture(
             texture<vr::VolumeDataType, cudaTextureType3D, cudaReadModeElementType>& aTexture, 
             cudaArray* d_aArray, const vr::VolumeType& d_aIdx, const vr::VolumeType aTypeAssigned)
@@ -693,6 +774,23 @@ cudaArray * syncVolume(
   d_aArray = createTextureFromVolume(aTexture, aVolume, d_aArray, aAllocateMemory);
 
   return d_aArray;
+}
+
+/*! \fn cudaArray* setPhaseTexture(const Volume &aVolume, 
+                                          cudaArray * d_aPhase, 
+                                          const uint64_t aTimeLastMemSync)
+ *  \brief copies phase volume from host to device
+ *  \param aVolume phase volume
+ *  \param d_aPhase array pointing to the device memory
+ *  \param aTimeLastMemSync timestamp on which the last rendering took place
+ */
+cudaArray * setPhaseTexture(const Volume &aVolume, 
+                                   cudaArray * d_aPhase, 
+                                   const uint64_t aTimeLastMemSync) {
+
+  bool allocateMemory = (aVolume.last_update > aTimeLastMemSync) || (aTimeLastMemSync == 0);
+  
+  return syncVolume(tex_phase, d_aPhase, aVolume, allocateMemory);
 }
 
 /*! \fn setGradientTextures(const Volume &aDx, 

@@ -65,7 +65,7 @@ classdef VolumeRender < handle
     %   renderer.LightSources = [LightSource(...), LightSource(...)]; % Define light sources
     %   image = renderer.render();
     %   imshow(image);
-    
+
     properties
         FocalLength(1,1)       = 0.0;
         DistanceToObject(1,1)  = 0.0;
@@ -101,6 +101,7 @@ classdef VolumeRender < handle
         VolumeGradientX       = false;
         VolumeGradientY       = false;
         VolumeGradientZ       = false;
+        VolumePhase           = false;
     end
 
     properties (SetAccess = private, Hidden = true)
@@ -116,6 +117,7 @@ classdef VolumeRender < handle
             addlistener(this,'VolumeGradientX','PostSet', @propEventHandler);
             addlistener(this,'VolumeGradientY','PostSet', @propEventHandler);
             addlistener(this,'VolumeGradientZ','PostSet', @propEventHandler);
+            addlistener(this,'VolumePhase','PostSet', @propEventHandler);
             
             this.objectHandle = volumeRender('new', varargin{:});
         end
@@ -240,6 +242,14 @@ classdef VolumeRender < handle
                 error('LightSources must be a 1xN vector with data of type LightSource!');
             end
         end
+
+        function set.VolumePhase(this, val)
+            if (isa(val,'Volume'))
+                this.VolumePhase = val;
+            else
+                error('VolumePhase must be of type Volume');
+            end
+        end
         
         function set.VolumeEmission(this, val)
             if (isa(val,'Volume'))
@@ -329,7 +339,8 @@ classdef VolumeRender < handle
             matrix=flip(this.RotationMatrix);
 
             image = volumeRender('render', this.objectHandle, ...
-                           this.LightSources, single(factors), ...
+                           this.LightSources, ...
+                           this.VolumePhase, single(factors), ...
                            single(this.ElementSizeUm), uint64(resolution), ...
                            single(matrix), single(props), ...
                            single(this.OpacityThreshold), single(this.Color), ...

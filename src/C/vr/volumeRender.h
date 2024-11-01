@@ -137,6 +137,8 @@ void copyLightSources(const LightSource *lightSources, const size_t count);
 void setGradientTextures(const Volume &dx, const Volume &dy, const Volume &dz, 
   cudaArray * &ptr_d_volumeDx, cudaArray * &ptr_d_volumeDy, cudaArray * &ptr_d_volumeDz, const uint64_t timeLastMemSync);
 
+cudaArray * setPhaseTexture(const Volume &aVolume, cudaArray * d_aPhase, const uint64_t aTimeLastMemSync);
+
 size_t iDivUp(size_t a, size_t b);
 
 inline int cutGetMaxGflopsDeviceId();
@@ -149,6 +151,14 @@ Volume mxMake_volume(const mxArray *mxVolume);
 enum GradientMethod : int {
   gradientCompute = 0, /*!< gradient computation on the fly */
   gradientLookup = 1   /*!< use LUT to estimate gradient */
+};
+
+/*! \enum PhaseMethod
+ * 	\brief possible scatter computation methods
+ */
+enum PhaseMethod : int {
+  phaseCompute = 0, /*!< gradient computation on the fly */
+  phaseLookup = 1   /*!< use LUT to estimate gradient */
 };
 
 /*! \enum VolumeType
@@ -171,6 +181,7 @@ void freeCudaGradientBuffers(
 );
 
 void setGradientMethod(const GradientMethod aMethod);
+void setPhaseMethod(const vr::PhaseMethod aMethod);
 
 void syncWithDevice(const Volume &aVolumeEmission, const Volume &aVolumeAbsorption,
                     const Volume &aVolumeReflection, const uint64_t timeLastMemSync,
