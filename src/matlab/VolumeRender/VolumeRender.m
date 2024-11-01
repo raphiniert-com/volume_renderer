@@ -1,70 +1,96 @@
 classdef VolumeRender < handle
-    % VOLUMERENDER Class for managing and rendering volumetric data with lighting and material properties.
-    %   This class handles various rendering settings, such as light source properties,
-    %   material factors (emission, reflection, and absorption), and camera parameters.
-    %   The rendering supports stereoscopic output and customizable volume data for realistic
-    %   rendering effects, useful in fields like microscopy and medical imaging.
+    % VolumeRender Class
+    %
+    % This class provides a GPU-accelerated renderer for volumetric data, with
+    % support for different lighting models, stereo rendering, and advanced
+    % shading techniques. It includes customizable settings for light sources,
+    % color intensities, object-camera distances, and rendering parameters
+    % related to scattering and reflection.
     %
     % Properties:
-    %   FocalLength           - Focal length of the virtual camera.
-    %   DistanceToObject      - Distance from the camera to the object in the scene.
-    %   OpacityThreshold      - Threshold for opacity rendering; values above this are fully opaque.
-    %   LightSources          - Array of light sources influencing the scene lighting.
-    %   Color                 - Base RGB color of the rendered volume.
-    %   FactorEmission        - Emission factor controlling how much light the volume emits.
-    %   FactorReflection      - Reflection factor determining reflective intensity.
-    %   FactorAbsorption      - Absorption factor defining how much light is absorbed by the volume.
-    %   CameraXOffset         - Offset between two cameras for stereoscopic rendering.
-    %   StereoOutput          - Stereo mode for 3D output (e.g., RedCyan anaglyph).
-    %   ElementSizeUm         - Element size in micrometers, representing voxel dimensions.
-    %   RotationMatrix        - Rotation matrix for setting the view orientation.
-    %   ImageResolution       - Resolution of the output image.
-    %   Shininess             - Shininess value for specular highlights in Blinn-Phong shading.
-    %   ScatteringWeight      - Weighting factor between reflection and scattering.
-    %   HgAsymmetry           - Asymmetry parameter for the Henyey-Greenstein scattering phase function.
-    %   TimeLastMemSync       - Timestamp of the last memory synchronization for the volumes.
+    % - FocalLength (1x1 float): Specifies the camera's focal length, affecting
+    %   field of view and depth perception in the render.
+    %
+    % - DistanceToObject (1x1 float): Distance from the camera to the object,
+    %   used in depth and scaling calculations.
+    %
+    % - OpacityThreshold (1x1 float): Alpha threshold for transparency. Pixels
+    %   reaching this threshold are considered opaque and terminate further
+    %   ray tracing.
+    %
+    % - LightSources (1xN LightSource array): List of LightSource objects that
+    %   affect the rendered volume.
+    %
+    % - Color (1x3 array): RGB color applied to the volume, affecting the
+    %   appearance of emitted and scattered light.
+    %
+    % - FactorEmission (1x1 float): Controls the intensity of emission for the
+    %   volume data.
+    %
+    % - FactorReflection (1x1 float): Scales the reflection intensity within the
+    %   volume.
+    %
+    % - FactorAbsorption (1x1 float): Scales the absorption of light, affecting
+    %   the attenuation of light through the volume.
+    %
+    % - CameraXOffset (1x1 float): Specifies the horizontal offset of the
+    %   camera for stereo rendering.
+    %
+    % - StereoOutput (StereoRenderMode enum): Defines stereo output mode,
+    %   supporting RedCyan and LeftRightHorizontal render formats.
+    %
+    % - ElementSizeUm (1x3 array): Physical dimensions of a voxel in micrometers.
+    %
+    % - RotationMatrix (3x3 matrix): Rotation matrix applied to the camera
+    %   perspective, supporting 3D navigation.
+    %
+    % - ImageResolution (1x2 array): Specifies the resolution of the rendered
+    %   image in pixels (width x height).
+    %
+    % - Shininess (1x1 float): Shininess exponent for Blinn-Phong shading,
+    %   controlling the sharpness of specular highlights.
+    %
+    % - ScatteringWeight (1x1 float): Weight factor between Blinn-Phong
+    %   reflection and Henyey-Greenstein scattering.
+    %
+    % - HgAsymmetry (1x1 float): Asymmetry factor for Henyey-Greenstein phase
+    %   function, controlling forward/backward scattering.
+    %
+    % - TimeLastMemSync (uint64): Timestamp of the last memory synchronization
+    %   with the GPU, ensuring updated volumes are used.
     %
     % Observable Properties:
-    %   VolumeReflection      - Volume data representing reflection characteristics.
-    %   VolumeEmission        - Volume data for emission; represents light-emitting areas.
-    %   VolumeAbsorption      - Volume data for absorption; higher values absorb more light.
-    %   VolumeGradientX       - Volume gradient data in the X direction.
-    %   VolumeGradientY       - Volume gradient data in the Y direction.
-    %   VolumeGradientZ       - Volume gradient data in the Z direction.
+    % - VolumeReflection, VolumeEmission, VolumeAbsorption, VolumeGradientX,
+    %   VolumeGradientY, VolumeGradientZ, VolumePhase (Volume objects):
+    %   References to volume data used for specific aspects of rendering.
+    %
+    %   * VolumeReflection - Volume data for reflection.
+    %   * VolumeEmission - Volume data for emission effects.
+    %   * VolumeAbsorption - Volume data representing absorption levels.
+    %   * VolumeGradientX/Y/Z - Gradient volumes along the X, Y, and Z axes.
+    %   * VolumePhase - Volume for phase function calculations.
     %
     % Private Properties:
-    %   objectHandle          - Handle to the underlying C++ memory manager for volume rendering.
-    %
+    % - objectHandle (pointer): Handle to the C++ memory manager for direct
+    %   memory management.
+    
     % Methods:
-    %   VolumeRender          - Constructor to initialize volume rendering properties and listeners.
-    %   delete                - Destructor to clean up resources.
-    %   syncVolumes           - Synchronizes the volume data with the GPU memory.
-    %   memInfo               - Displays memory usage information.
-    %   memClear              - Clears GPU memory associated with the volume rendering.
-    %   rotate                - Applies a rotation to the view orientation using given angles.
-    %   render                - Renders an image from the volume data with optional stereoscopic effect.
-    %   resetGradientVolumes  - Resets gradient volume properties to switch rendering to gradient mode.
+    % - VolumeRender: Constructor. Initializes volumes and GPU resources.
+    % - delete: Destructor. Cleans up GPU memory associated with the instance.
+    % - syncVolumes: Synchronizes volumes to the GPU, ensuring they are current.
+    % - memInfo: Outputs GPU memory usage information.
+    % - memClear: Clears GPU memory allocated for this instance.
+    % - rotate: Applies a rotation matrix to adjust the view perspective.
+    % - render: Renders the volume to an image, with support for stereo
+    %   rendering modes.
+    %
+    % Set Methods:
+    % - resetGradientVolumes: Resets gradient volumes to switch back to 
+    %   gradient calculation.
     %
     % Static Methods:
-    %   normalizeSequence     - Normalizes a 4D image sequence to values between [0, 1].
-    %   normalizeImage        - Normalizes an RGB image to values between [0, 1] with optional min/max input.
-    %
-    % Usage:
-    %   Create a VolumeRender object, configure light sources, material factors, and other
-    %   properties, and then call the render method to obtain the rendered image.
-    %
-    % Notes:
-    %   - For more detailed documentation, refer to the accompanying documentation PDF.
-    %   - Ensure that volume properties (VolumeReflection, VolumeEmission, etc.) are set with
-    %     compatible data types to prevent rendering errors.
-    %
-    % Example:
-    %   renderer = VolumeRender();
-    %   renderer.FactorEmission = 0.8;
-    %   renderer.Shininess = 50;
-    %   renderer.LightSources = [LightSource(...), LightSource(...)]; % Define light sources
-    %   image = renderer.render();
-    %   imshow(image);
+    % - normalizeSequence: Normalizes a 4D image sequence to [0,1].
+    % - normalizeImage: Normalizes a 3D RGB image to [0,1].
 
     properties
         FocalLength(1,1)       = 0.0;
