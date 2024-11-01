@@ -23,10 +23,10 @@ render = VolumeRender();
 render.ElementSizeUm=elementSizeUm;
 
 % setup illumination settings
-render.VolumeIllumination = Volume(HenyeyGreenstein(64));
+render.VolumePhase = Volume(HenyeyGreenstein_LUT(64));
 
-render.LightSources = LightSource([1500,1500,0], [1,1,1]);
-
+render.LightSources = LightSource([15,15,0], [1,1,1], LightType.Spotlight);
+render.ScatteringWeight = 0.8;
 render.FocalLength = 3.0;
 render.DistanceToObject = 6.0;
 render.rotate(90,0,0);
@@ -44,8 +44,8 @@ render.ImageResolution= ...
 % set render volumes
 render.VolumeEmission = emission_main;
 render.VolumeAbsorption = emission_main;
-render.FactorReflection = 0.3;
-render.FactorEmission=10;
+render.FactorReflection = 1;
+render.FactorEmission = 1;
 
 render.Color = [1,1,1];
 
