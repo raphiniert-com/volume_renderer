@@ -38,8 +38,7 @@ render.VolumeGradientY = gY;
 render.VolumeGradientZ = gZ;
 
 % setup illumination settings
-render.VolumeIllumination=Volume(HenyeyGreenstein(64));
-render.LightSources = [LightSource([500,1000,550],[0,1,1]), LightSource([0,550,90],[1,0.5,1])];
+render.LightSources = [LightSource([1,1,1],[0,3,3], LightType.Diffuse), LightSource([0,1,0.9],[3,2,3], LightType.Diffuse)];
 
 % misc parameters
 render.ElementSizeUm=elementSizeUm;
