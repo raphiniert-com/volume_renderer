@@ -207,10 +207,21 @@ classdef VolumeRender < handle
                                  RotationX * RotationY * RotationZ;
         end
         
-        function image = render(this)
-            % rendering image. If CmaeraXOffset does not equal 0
-            % a 3D anaglyph will be returned
-            % image     output (3D) image
+        function image = render(this, varargin)
+            % Renders an image. If CameraXOffset is not equal to 0, a 3D anaglyph
+            % will be generated. If the optional argument 'complement' is set to true,
+            % a complementary (inverted) image is produced.
+            % image - output (3D) image
+            
+            % Default values
+            complement = false;
+        
+            % Parse varargin for optional 'complement' parameter
+            if nargin > 1
+                if strcmp(varargin{1}, 'complement')
+                    complement = true;
+                end
+            end
             
             if (this.CameraXOffset==0)
                 image=p_render(this, single(this.CameraXOffset), flip(this.ImageResolution));
@@ -237,6 +248,13 @@ classdef VolumeRender < handle
                 rect=[0 0 (size(rightImage,2)-delta) size(rightImage,1)];
                 rightImage=imcrop(rightImage, rect);
                 
+                % Swap left and right channels if complementing for spatial accuracy
+                if complement
+                    leftImageTemp = leftImage;
+                    leftImage = rightImage;
+                    rightImage = leftImageTemp;
+                end
+
                 if this.StereoOutput == StereoRenderMode.RedCyan
                     % RGB - anaglyph
                     image=zeros([size(leftImage,1), size(leftImage,2), 3]);
@@ -246,7 +264,11 @@ classdef VolumeRender < handle
                 elseif this.StereoOutput == StereoRenderMode.LeftRightHorizontal
                     image = [leftImage, rightImage];
                 end
-                    
+            end
+
+            % Apply complementary (inversion) effect if enabled
+            if complement
+                image = imcomplement(image); % Invert colors using MATLAB's imcomplement function
             end
         end
     end

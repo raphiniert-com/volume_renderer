@@ -77,7 +77,9 @@ render.rotate(90,0,0);
 render.rotate(-15,15,15);
 
 % setup illumintation
-render.LightSources = LightSource([-15,15,0], [1,1,1]);
+render.LightSources = LightSource([-15,15,0], [10,10,10], LightType.Diffuse);
+% render.VolumePhase = Volume(HenyeyGreenstein_LUT(64));
+render.ScatteringWeight = 1.0;
 
 % setup volumes
 data_absorption = data_main;
@@ -90,7 +92,7 @@ absorptionVolume=emission_main;
 render.VolumeAbsorption=absorptionVolume;
 render.VolumeEmission=emission_main;
 
-render.VolumeIllumination=Volume(HenyeyGreenstein(64));
+% render.VolumeIllumination=Volume(HenyeyGreenstein(64));
 
 % setup image size (of the resulting 2D image)
 render.ImageResolution=size(emission_main.Data,[1 2]);
@@ -134,7 +136,7 @@ end_frame=total_frames-(total_frames/8);
 
 % compute factor for dimming
 n = end_frame-start_frame+1;
-factor = linspace(1,0.2,n);
+factor = linspace(1,0.0,n);
 
 sw.add('2', 'main channel #2');
 
@@ -144,7 +146,11 @@ for i=start_frame:end_frame
 
     % emissionVolume=Volume(factor(i-start_frame+1) * emission_main.Data(1:end, half_size(2):end, 1:end));
 
-    render.VolumeEmission.Data(logical(mask.Data))=factor(i-start_frame+1) * emission_main.Data(logical(mask.Data));
+    % render.VolumeEmission.Data(logical(mask.Data))=factor(i-start_frame+1) * emission_main.Data(logical(mask.Data));
+    % Update the emission volume with clamping to avoid artifacts
+    % Apply factor and clamp the result between 0 and 1
+    emission_scaled = factor(i - start_frame + 1) * emission_main.Data(logical(mask.Data));
+    render.VolumeEmission.Data(logical(mask.Data)) = min(max(emission_scaled, 0), 1);
 
     sw.start('2');
     rendered_image = render.render();

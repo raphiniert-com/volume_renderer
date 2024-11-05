@@ -76,7 +76,7 @@ render = VolumeRender();
 
 % setup render options
 render.Shininess = 30;
-render.ScatteringWeight = 0.5;
+render.ScatteringWeight = 0.7;
 render.Color = [1,1,1];
 
 render.FactorEmission=1;
@@ -92,11 +92,11 @@ render.rotate(-90,270,0);
 render.rotate(-15,15,15);
 
 % setup illumintation
-render.LightSources = LightSource([-15,15,0], [1,1,1]);
+render.LightSources = LightSource([0,15,0], [1,1,1], LightType.Diffuse);
 
 % setup volumes
 data_absorption = data_main;
-absorptionVolume=emission_main;
+absorptionVolume = emission_main;
 % absorptionVolume=Volume(data_absorption);
 % half_size=size(data_absorption)/2;
 % absorptionVolume.resize(half_size);
@@ -105,7 +105,7 @@ absorptionVolume=emission_main;
 render.VolumeAbsorption=absorptionVolume;
 render.VolumeEmission=emission_main;
 
-render.VolumeScattering=Volume(HenyeyGreenstein_MATLAB(512));
+render.VolumePhase=Volume(HenyeyGreenstein_LUT(64));
 
 % setup image size (of the resulting 2D image)
 render.ImageResolution=size(emission_main.Data,[1 2]);
@@ -149,16 +149,14 @@ end_frame=total_frames-(total_frames/8);
 
 % compute factor for dimming
 n = end_frame-start_frame+1;
-factor = linspace(1,0.2,n);
+factor = linspace(1,0.0,n);
 
 sw.add('2', 'main channel #2');
 
+render.VolumeAbsorption = Volume(render.VolumeEmission.Data);
+
 for i=start_frame:end_frame
     % disp(strcat(' -image ', num2str(i)));
-    % data_main =  factor(i-start_frame+1) * mask.Data .* single(data_main);
-
-    % emissionVolume=Volume(factor(i-start_frame+1) * emission_main.Data(1:end, half_size(2):end, 1:end));
-
     render.VolumeEmission.Data(logical(mask.Data))=factor(i-start_frame+1) * emission_main.Data(logical(mask.Data));
     
     sw.start('2');
@@ -167,11 +165,13 @@ for i=start_frame:end_frame
 
     % rotate object
     render.rotate(0,beta,0);
-
+    
     rendered_images_main(:,:,:,i) = rendered_image;
 end
 
 sw.add('3', 'main channel #3');
+
+disp(start_frame);
 
 start_frame=end_frame+1;
 end_frame=total_frames;
@@ -211,10 +211,10 @@ render.VolumeAbsorption=emission_structure;
 render.VolumeEmission=emission_structure;
 
 render.FactorEmission=1;
-render.FactorAbsorption=2;
+render.FactorAbsorption=1;
 render.FactorReflection=1;
 
-render.Color = [0,1,0];
+render.Color = [0,10,0];
 
 %% render structure image channel
 
@@ -241,7 +241,8 @@ sw.print();
 
 rendered_images_combined = rendered_images_main+rendered_images_structure;
 
-normalized_images = VolumeRender.normalizeSequence(rendered_images_combined);
+% normalized_images = VolumeRender.normalizeSequence(rendered_images_combined);
+normalized_images = rendered_images_combined / max(rendered_images_combined(:));
 
 mov = immovie(normalized_images);
 implay(mov, 15);

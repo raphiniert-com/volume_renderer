@@ -60,7 +60,7 @@ render.FactorReflection=0.4;
 
 render.Color = [1,1,0];
 
-rendered_image_structure = render.render();
+rendered_image_structure = render.render('complement');
 
 render.memInfo();
 
@@ -78,7 +78,7 @@ render.FactorReflection=0.6;
 render.Color = [1,1,1];
 
 sw.start('r');
-rendered_image_main = render.render();
+rendered_image_main = render.render('complement');
 sw.stop('r');
 
 sw.print();

@@ -45,7 +45,7 @@ typedef float3 (*gradientFunction)(const float3&, const float3&, const float3&,
  *         the scattering intensity based on light direction, view direction, 
  *         and an asymmetry factor.
  */
-typedef float (*phaseFunction)(const float3&, const float3&, float);                                   
+typedef float (*phaseFunction)(const float3&, const float3&, const float3&, float);                                   
 
 // forward declaration
 __device__ float3 computeGradient(const float3&, const float3&, const float3&,
@@ -54,9 +54,9 @@ __device__ float3 computeGradient(const float3&, const float3&, const float3&,
 __device__ float3 lookupGradient(const float3&, const float3&, const float3&,
                                  const float3&, const float3&, const float3&);
 
-__device__ float computeHG(const float3&, const float3&, float);
+__device__ float computeHG(const float3&, const float3&, const float3&, float);
 
-__device__ float lookupPhase(const float3&, const float3&, float);
+__device__ float lookupPhase(const float3&, const float3&, const float3&, float);
 
 /*! \var __device__ gradientFunction gradient_functions[2] = { computeGradient, lookupGradient }; 
  *  \brief Contains function pointer of possible gradient retrieval functions
@@ -301,14 +301,15 @@ __device__ float3 lookupGradient(const float3& aSamplePosition,
 }
 
 /**
- * @brief Computes the Henyey-Greenstein phase function directly.
+ * \brief Computes the Henyey-Greenstein phase function directly.
  * 
- * @param lightDir Normalized direction of the light relative to the voxel.
- * @param viewDir  Normalized direction from the voxel to the viewer or camera.
- * @param g        Asymmetry factor for the HG phase function.
- * @return Computed HG phase function value.
+ * \param lightDir Normalized direction of the light relative to the voxel.
+ * \param viewDir  Normalized direction from the voxel to the viewer or camera.
+ * \param surfaceNormal Normalized surface normal at the voxel position (unused in computation).
+ * \param g        Asymmetry factor for the HG phase function.
+ * \return Computed HG phase function value.
  */
-__device__ float computeHG(const float3 &lightDir, const float3 &viewDir, float g) {
+__device__ float computeHG(const float3 &lightDir, const float3 &viewDir, const float3 &surfaceNormal, float g) {
     // Calculate cosTheta, the cosine of the angle between light and view directions
     float cosTheta = dot(lightDir, viewDir);
     cosTheta = fmaxf(-1.0f, fminf(1.0f, cosTheta)); // Clamp to [-1, 1]
@@ -329,39 +330,39 @@ __device__ float computeHG(const float3 &lightDir, const float3 &viewDir, float 
 }
 
 /**
- * @brief Looks up a precomputed HG phase function value from a 3D texture.
+ * \brief Looks up a precomputed HG phase function value from a 3D texture.
  * 
- * @param lightDir Normalized direction of the light relative to the voxel.
- * @param viewDir  Normalized direction from the voxel to the viewer or camera.
- * @param g        Asymmetry factor parameter (unused in lookup).
- * @return Precomputed HG phase function value from the texture.
+ * \param lightDir Normalized direction of the light relative to the voxel.
+ * \param viewDir  Normalized direction from the voxel to the viewer or camera.
+ * \param surfaceNormal Normalized surface normal at the voxel position.
+ * \param g        Asymmetry factor parameter (unused in lookup).
+ * \return Precomputed HG phase function value from the texture.
  */
-__device__ float lookupPhase(const float3 &lightDir, const float3 &viewDir, float g) {
-    // Calculate angles alpha and beta between the vectors and the z-axis
-    float alpha = acosf(fminf(fmaxf(lightDir.z, -1.0f), 1.0f));  // Clamp value to [-1, 1]
-    float beta = acosf(fminf(fmaxf(viewDir.z, -1.0f), 1.0f));    // Clamp value to [-1, 1]
+__device__ float lookupPhase(const float3 &lightDir, const float3 &viewDir, const float3 &surfaceNormal, float g) {
+    // Project lightDir and viewDir onto the plane orthogonal to the surfaceNormal
+    float3 lightOutProj = lightDir - dot(lightDir, surfaceNormal) * surfaceNormal;
+    float3 lightInProj = viewDir - dot(viewDir, surfaceNormal) * surfaceNormal;
 
-    // Project lightDir and viewDir onto the x-y plane
-    float3 lightDirXY = make_float3(lightDir.x, lightDir.y, 0.0f);
-    float3 viewDirXY = make_float3(viewDir.x, viewDir.y, 0.0f);
+    // Ensure the projected vectors are not zero vectors
+    float lengthLightOutProj = length(lightOutProj);
+    float lengthLightInProj = length(lightInProj);
 
-    // Calculate lengths of the projected vectors
-    float lengthLightDirXY = length(lightDirXY);
-    float lengthViewDirXY = length(viewDirXY);
+    float gamma = 0.0f; // Default value for gamma
+    if (lengthLightOutProj > 0.0f && lengthLightInProj > 0.0f) {
+        // Normalize the projected vectors to avoid numerical instability
+        lightOutProj = normalize(lightOutProj);
+        lightInProj = normalize(lightInProj);
 
-    // Avoid division by zero by ensuring the projected vectors are not zero vectors
-    if (lengthLightDirXY > 0.0f && lengthViewDirXY > 0.0f) {
-        // Calculate the rotation angle gamma between light and view directions in the x-y plane
-        float dotProductXY = dot(lightDirXY, viewDirXY) / (lengthLightDirXY * lengthViewDirXY);
-        dotProductXY = fminf(fmaxf(dotProductXY, -1.0f), 1.0f);  // Clamp value to [-1, 1]
-        float gamma = acosf(dotProductXY);
-    } else {
-        // Handle the case where one or both vectors are zero
-        float gamma = 0.0f;  // Or any appropriate default value
+        // Calculate the angle between the two projected vectors
+        gamma = acosf(fminf(fmaxf(dot(lightInProj, lightOutProj), -1.0f), 1.0f)) * ONE_OVER_2PI;
     }
 
+    // Calculate angles alpha and beta between the vectors and the z-axis
+    float alpha = acosf(fminf(fmaxf(lightDir.z, -1.0f), 1.0f)) * ONE_OVER_2PI;  // Clamp value to [-1, 1]
+    float beta = acosf(fminf(fmaxf(viewDir.z, -1.0f), 1.0f)) * ONE_OVER_2PI;    // Clamp value to [-1, 1]
+
     // Perform texture lookup
-    return tex3D<float>(tex_phase, alphaNorm, betaNorm, gammaNorm);
+    return tex3D<float>(tex_phase, alpha, beta, gamma);
 }
 
 /*! \fn float angle(const float3& a, const float3& b)
@@ -382,30 +383,30 @@ __forceinline__ __device__ float angle(const float3 &a, const float3 &b) {
                      vr::LightSource *aLightSources, const float aFactorReflection, 
                      const float3 &surfaceNormal, const float aShininess, 
                      const float aScatteringWeight, const float aHgAsymmetry)
- *  \brief Calculates the illumination at a voxel position based on multiple light sources,
- *         using both Blinn-Phong reflection and Henyey-Greenstein scattering for realism.
+ * \brief Calculates the illumination at a voxel position based on multiple light sources,
+ *        using both Blinn-Phong reflection and Henyey-Greenstein scattering for realism.
  *
- *  This function computes the shading at a specified voxel position by combining the effects
- *  of Blinn-Phong reflection and Henyey-Greenstein (HG) scattering. It evaluates each light 
- *  source's contribution by calculating diffuse and specular reflection from Blinn-Phong, 
- *  as well as single scattering using the HG phase function. Light fall-off due to distance 
- *  is incorporated using the inverse-square law. A weighting factor controls the balance 
- *  between reflection and scattering.
+ * This function computes the shading at a specified voxel position by combining the effects
+ * of Blinn-Phong reflection and Henyey-Greenstein (HG) scattering. It evaluates each light 
+ * source's contribution by calculating diffuse and specular reflection from Blinn-Phong, 
+ * as well as single scattering using the HG phase function. Light fall-off due to distance 
+ * is incorporated using the inverse-square law. A weighting factor controls the balance 
+ * between reflection and scattering.
  *
- *  \param aSamplePosition 3D position of the sample within the volume, used for texture sampling.
- *  \param aPosition 3D position of the voxel within the scene.
- *  \param aViewPosition 3D position of the viewer or camera.
- *  \param aColor Color of the volume at the voxel, representing its absorption characteristics.
- *  \param aLightSources Pointer to an array of light sources influencing the voxel.
- *  \param aFactorReflection Reflection factor applied to the sampled reflection texture value.
- *  \param surfaceNormal Surface normal at the voxel position, precomputed for efficient shading.
- *  \param aShininess Shininess exponent for the Blinn-Phong model, controlling the highlight size.
- *  \param aScatteringWeight Weight between Blinn-Phong reflection and HG scattering components,
- *                           where 0 indicates full reflection and 1 indicates full scattering.
- *  \param aHgAsymmetry Asymmetry factor \( g \) in the HG phase function, controlling forward vs.
- *                      backward scattering characteristics.
+ * \param aSamplePosition 3D position of the sample within the volume, used for texture sampling.
+ * \param aPosition 3D position of the voxel within the scene.
+ * \param aViewPosition 3D position of the viewer or camera.
+ * \param aColor Color of the volume at the voxel, representing its absorption characteristics.
+ * \param aLightSources Pointer to an array of light sources influencing the voxel.
+ * \param aFactorReflection Reflection factor applied to the sampled reflection texture value.
+ * \param surfaceNormal Surface normal at the voxel position, precomputed for efficient shading.
+ * \param aShininess Shininess exponent for the Blinn-Phong model, controlling the highlight size.
+ * \param aScatteringWeight Weight between Blinn-Phong reflection and HG scattering components,
+ *                          where 0 indicates full reflection and 1 indicates full scattering.
+ * \param aHgAsymmetry Asymmetry factor \( g \) in the HG phase function, controlling forward vs.
+ *                     backward scattering characteristics.
  * 
- *  \return Computed color at the voxel based on illumination, reflection, and scattering.
+ * \return Computed color at the voxel based on illumination, reflection, and scattering.
  */
 __device__ float3 shade(const float3 &aSamplePosition, const float3 &aPosition, 
                         const float3 &aViewPosition, const float3 &aColor, 
@@ -424,7 +425,7 @@ __device__ float3 shade(const float3 &aSamplePosition, const float3 &aPosition,
     lightDir = normalize(lightDir);
 
     // Apply attenuation unless intensity is -1 (indicating diffuse lighting)
-    float attenuation = (lightSource.intensity == -1) ? 1.0f : lightSource.intensity / (lightDistanceSquared + 1e-6f);
+    float attenuation = (lightSource.intensity == -1.0f) ? 1.0f : lightSource.intensity / (lightDistanceSquared + 1e-6f);
 
     // Calculate view direction and half-vector for Blinn-Phong
     float3 viewDir = normalize(aViewPosition - aPosition);
@@ -438,20 +439,20 @@ __device__ float3 shade(const float3 &aSamplePosition, const float3 &aPosition,
       
       // Clamp specular factor to avoid sharp artifacts
       float specularFactor = pow(max(dot(surfaceNormal, halfVector), 0.0f), aShininess);
-      specularFactor = min(specularFactor, 1.0f);  // Clamp to [0, 1] for stability
+      // specularFactor = min(specularFactor, 1.0f);  // Clamp to [0, 1] for stability
 
       float3 diffuseComponent = diffuseFactor * lightSource.color * aColor;
       float3 specularComponent = specularFactor * lightSource.color;
 
-      // Reflection texture lookup with minimum offset to avoid zero
-      float reflection = fmaxf(factorReflection * tex3D(tex_reflection, aSamplePosition.x, aSamplePosition.y, aSamplePosition.z), 0.01f);
+      // Reflection texture lookup
+      float reflection = factorReflection * tex3D(tex_reflection, aSamplePosition.x, aSamplePosition.y, aSamplePosition.z);
 
       // Combine Blinn-Phong reflection with reflection texture
       reflectionComponent = (1.0f - aScatteringWeight) * (diffuseComponent + specularComponent) * reflection;
     }
 
     // Scattering
-    float phase = (phase_functions[dc_activePhaseMethod])(lightDir, viewDir, aHgAsymmetry);
+    float phase = (phase_functions[dc_activePhaseMethod])(lightDir, viewDir, surfaceNormal, aHgAsymmetry);
 
     // Scattering component based on phase function
     float3 scatteringComponent = aScatteringWeight * phase * lightSource.color * aColor;
@@ -565,7 +566,7 @@ __global__ void d_render(float *d_aOutput, const vr::RenderOptions aOptions,
     // ###############################
 
     float dx = tstep;
-    float alpha = 1 - __expf(-absorption * dx);
+    float alpha = 1.0f - __expf(-absorption * dx);
 
     // apply color
     float ds = tstep;
@@ -573,7 +574,7 @@ __global__ void d_render(float *d_aOutput, const vr::RenderOptions aOptions,
 
     // Calculate surface normal based on the gradient
     const float3 surfaceNormal =
-      -1 * normalize((gradient_functions[dc_activeGradientMethod])(
+      -1.0f * normalize((gradient_functions[dc_activeGradientMethod])(
                pos_sample, pos, aGradientStep, boxMin, boxMax, boxScale));
 
     // compute pixel value
@@ -598,7 +599,7 @@ __global__ void d_render(float *d_aOutput, const vr::RenderOptions aOptions,
     shaded.z *= shaded.w;
 
     // "under" operator for front-to-back blending
-    sum = (1 - sum.w) * (shaded) + sum;
+    sum = (1.0f - sum.w) * (shaded) + sum;
 
     // exit early if opaque
     if (sum.w > opacityThreshold)
