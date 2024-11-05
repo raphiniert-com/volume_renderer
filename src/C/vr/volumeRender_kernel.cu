@@ -309,14 +309,22 @@ __device__ float3 lookupGradient(const float3& aSamplePosition,
  * @return Computed HG phase function value.
  */
 __device__ float computeHG(const float3 &lightDir, const float3 &viewDir, float g) {
-    // Calculate cosTheta, the angle between light and view directions
+    // Calculate cosTheta, the cosine of the angle between light and view directions
     float cosTheta = dot(lightDir, viewDir);
-    cosTheta = fminf(1.0f, fmaxf(-1.0f, cosTheta));
+    cosTheta = fmaxf(-1.0f, fminf(1.0f, cosTheta)); // Clamp to [-1, 1]
 
     // Henyey-Greenstein phase function calculation
     float gSquared = g * g;
     float numerator = 1.0f - gSquared;
-    float denominator = powf(1.0f + gSquared - 2.0f * g * cosTheta, 1.5f);
+    float epsilon = 1e-6f; // Small value to avoid zero or negative denominator
+    float denominator = powf(fmaxf(1.0f + gSquared - 2.0f * g * cosTheta, epsilon), 1.5f);
+
+    // Handle the edge case where g is close to 1 or -1
+    if (fabs(g) > 0.999f) {
+        return 1.0f / (4.0f * PI);
+    }
+
+    // Final Henyey-Greenstein phase function value
     return (1.0f / (4.0f * PI)) * (numerator / denominator);
 }
 
@@ -329,19 +337,28 @@ __device__ float computeHG(const float3 &lightDir, const float3 &viewDir, float 
  * @return Precomputed HG phase function value from the texture.
  */
 __device__ float lookupPhase(const float3 &lightDir, const float3 &viewDir, float g) {
-    // Calculate angles alpha, beta, and gamma
-    float alpha = acosf(lightDir.z);  // Angle between lightDir and z-axis
-    float beta = acosf(viewDir.z);    // Angle between viewDir and z-axis
-    
-    // Calculate the rotation angle gamma between light and view directions in the x-y plane
-    float3 lightDirXY = make_float3(lightDir.x, lightDir.y, 0.0f);  // Project lightDir onto x-y plane
-    float3 viewDirXY = make_float3(viewDir.x, viewDir.y, 0.0f);     // Project viewDir onto x-y plane
-    float gamma = acosf(dot(lightDirXY, viewDirXY) / (length(lightDirXY) * length(viewDirXY)));
+    // Calculate angles alpha and beta between the vectors and the z-axis
+    float alpha = acosf(fminf(fmaxf(lightDir.z, -1.0f), 1.0f));  // Clamp value to [-1, 1]
+    float beta = acosf(fminf(fmaxf(viewDir.z, -1.0f), 1.0f));    // Clamp value to [-1, 1]
 
-    // Normalize angles to range [0, 1]
-    float alphaNorm = alpha / PI;
-    float betaNorm = beta / PI;
-    float gammaNorm = gamma / (2.0f * PI);
+    // Project lightDir and viewDir onto the x-y plane
+    float3 lightDirXY = make_float3(lightDir.x, lightDir.y, 0.0f);
+    float3 viewDirXY = make_float3(viewDir.x, viewDir.y, 0.0f);
+
+    // Calculate lengths of the projected vectors
+    float lengthLightDirXY = length(lightDirXY);
+    float lengthViewDirXY = length(viewDirXY);
+
+    // Avoid division by zero by ensuring the projected vectors are not zero vectors
+    if (lengthLightDirXY > 0.0f && lengthViewDirXY > 0.0f) {
+        // Calculate the rotation angle gamma between light and view directions in the x-y plane
+        float dotProductXY = dot(lightDirXY, viewDirXY) / (lengthLightDirXY * lengthViewDirXY);
+        dotProductXY = fminf(fmaxf(dotProductXY, -1.0f), 1.0f);  // Clamp value to [-1, 1]
+        float gamma = acosf(dotProductXY);
+    } else {
+        // Handle the case where one or both vectors are zero
+        float gamma = 0.0f;  // Or any appropriate default value
+    }
 
     // Perform texture lookup
     return tex3D<float>(tex_phase, alphaNorm, betaNorm, gammaNorm);
@@ -413,25 +430,31 @@ __device__ float3 shade(const float3 &aSamplePosition, const float3 &aPosition,
     float3 viewDir = normalize(aViewPosition - aPosition);
     float3 halfVector = normalize(lightDir + viewDir);
 
-    // Blinn-Phong Diffuse and Specular Components
-    float diffuseFactor = max(dot(surfaceNormal, lightDir), 0.0f);
-    float specularFactor = pow(max(dot(surfaceNormal, halfVector), 0.0f), aShininess);
+    // Reflection
+    float3 reflectionComponent = make_float3(0.0f, 0.0f, 0.0f);
+    if (aScatteringWeight < 1.0f) {
+      // Blinn-Phong Diffuse and Specular Components
+      float diffuseFactor = max(dot(surfaceNormal, lightDir), 0.0f);
+      
+      // Clamp specular factor to avoid sharp artifacts
+      float specularFactor = pow(max(dot(surfaceNormal, halfVector), 0.0f), aShininess);
+      specularFactor = min(specularFactor, 1.0f);  // Clamp to [0, 1] for stability
 
-    float3 diffuseComponent = diffuseFactor * lightSource.color * aColor;
-    float3 specularComponent = specularFactor * lightSource.color;
+      float3 diffuseComponent = diffuseFactor * lightSource.color * aColor;
+      float3 specularComponent = specularFactor * lightSource.color;
 
-    // This line dynamically calls the appropriate phase function (either computeHG or lookupPhase)
-    // based on the active phase method
+      // Reflection texture lookup with minimum offset to avoid zero
+      float reflection = fmaxf(factorReflection * tex3D(tex_reflection, aSamplePosition.x, aSamplePosition.y, aSamplePosition.z), 0.01f);
+
+      // Combine Blinn-Phong reflection with reflection texture
+      reflectionComponent = (1.0f - aScatteringWeight) * (diffuseComponent + specularComponent) * reflection;
+    }
+
+    // Scattering
     float phase = (phase_functions[dc_activePhaseMethod])(lightDir, viewDir, aHgAsymmetry);
 
     // Scattering component based on phase function
     float3 scatteringComponent = aScatteringWeight * phase * lightSource.color * aColor;
-
-    // Reflection texture lookup
-    float reflection = factorReflection * tex3D(tex_reflection, aSamplePosition.x, aSamplePosition.y, aSamplePosition.z);
-
-    // Combine Blinn-Phong reflection with reflection texture and HG scattering
-    float3 reflectionComponent = (1.0f - aScatteringWeight) * (diffuseComponent + specularComponent) * reflection;
 
     // Accumulate the result for all light sources with attenuation applied at the end
     result += (scatteringComponent + reflectionComponent) * attenuation;
@@ -439,6 +462,7 @@ __device__ float3 shade(const float3 &aSamplePosition, const float3 &aPosition,
 
   return result;
 }
+
 
 /*! \fn void d_render(float *d_aOutput,  const vr::RenderOptions aOptions,
          const float3 aColor, const vr::LightSource * aLightSources,
