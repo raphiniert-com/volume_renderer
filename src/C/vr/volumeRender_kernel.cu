@@ -419,27 +419,32 @@ __device__ float3 shade(const float3 &aSamplePosition, const float3 &aPosition,
   for (size_t i = 0; i < c_numLightSources; ++i) {
     vr::LightSource lightSource = aLightSources[i];
 
+    // Check if the light source is ambient light
+    if (lightSource.intensity == -2.0f) {
+      // Ambient light contribution
+      float3 ambientComponent = lightSource.color * aColor;  // Ambient light affects all colors equally
+      result += ambientComponent;
+      continue;  // Skip other calculations for ambient light
+    }
+
     // Calculate light direction and distance
     float3 lightDir = lightSource.position - aPosition;
     float lightDistanceSquared = dot(lightDir, lightDir);
     lightDir = normalize(lightDir);
 
     // Apply attenuation unless intensity is -1 (indicating diffuse lighting)
-    float attenuation = (lightSource.intensity == -1.0f) ? 1.0f : lightSource.intensity / (lightDistanceSquared + 1e-6f);
+    float attenuation = 1.0f; // (lightSource.intensity == -1.0f) ? 1.0f : lightSource.intensity / (lightDistanceSquared + 1.0f);
 
     // Calculate view direction and half-vector for Blinn-Phong
     float3 viewDir = normalize(aViewPosition - aPosition);
     float3 halfVector = normalize(lightDir + viewDir);
 
-    // Reflection
+    // Reflection component (Blinn-Phong model)
     float3 reflectionComponent = make_float3(0.0f, 0.0f, 0.0f);
     if (aScatteringWeight < 1.0f) {
       // Blinn-Phong Diffuse and Specular Components
       float diffuseFactor = max(dot(surfaceNormal, lightDir), 0.0f);
-      
-      // Clamp specular factor to avoid sharp artifacts
       float specularFactor = pow(max(dot(surfaceNormal, halfVector), 0.0f), aShininess);
-      // specularFactor = min(specularFactor, 1.0f);  // Clamp to [0, 1] for stability
 
       float3 diffuseComponent = diffuseFactor * lightSource.color * aColor;
       float3 specularComponent = specularFactor * lightSource.color;
@@ -451,10 +456,8 @@ __device__ float3 shade(const float3 &aSamplePosition, const float3 &aPosition,
       reflectionComponent = (1.0f - aScatteringWeight) * (diffuseComponent + specularComponent) * reflection;
     }
 
-    // Scattering
+    // Scattering component based on HG phase function
     float phase = (phase_functions[dc_activePhaseMethod])(lightDir, viewDir, surfaceNormal, aHgAsymmetry);
-
-    // Scattering component based on phase function
     float3 scatteringComponent = aScatteringWeight * phase * lightSource.color * aColor;
 
     // Accumulate the result for all light sources with attenuation applied at the end

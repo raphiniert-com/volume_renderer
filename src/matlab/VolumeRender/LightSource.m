@@ -56,10 +56,12 @@ classdef LightSource
                error('dimensions of color must be [1,3]');
             end
             % compute intensity based on perceptual weights
-            if (type == LightType.Spotlight)
+            if (type == LightType.Attenuated)
                 obj.Intensity = -1;
             elseif (type == LightType.Diffuse)
                 obj.Intensity = 0.2126 * obj.Color(1) + 0.7152 * obj.Color(2) + 0.0722 * obj.Color(3);
+            elseif (type == LightType.Ambient)
+                obj.Intensity = -2;
             else
                error('Please specify LightType');
             end

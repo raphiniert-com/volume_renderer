@@ -50,7 +50,7 @@ mask.pad(mask_margin, 0);
 mask.Data(mask.Data>0.1) = 1;
 mask.Data(mask.Data<=0.1) = 0;
 mask.Data(half_size(2):end, 1:end, 1:end) = 1;
-emission_main.Data = emission_main.Data;
+% emission_main.Data = emission_main.Data;
 
 sw = Stopwatch('timings');
 
@@ -76,7 +76,7 @@ render = VolumeRender();
 
 % setup render options
 render.Shininess = 30;
-render.ScatteringWeight = 0.7;
+render.ScatteringWeight = 1;
 render.Color = [1,1,1];
 
 render.FactorEmission=1;
@@ -85,27 +85,28 @@ render.FactorReflection=1;
 
 render.FocalLength=4.5;
 render.DistanceToObject = 4;
-render.OpacityThreshold=0.95;
+render.OpacityThreshold=0.9;
 
 % rotate
 render.rotate(-90,270,0);
 render.rotate(-15,15,15);
 
 % setup illumintation
-render.LightSources = LightSource([0,15,0], [1,1,1], LightType.Diffuse);
+render.LightSources = [LightSource([0,15,-5], [1,1,1], LightType.Ambient), LightSource([0,-5,-5], [1,0,1], LightType.Diffuse)];
 
 % setup volumes
 data_absorption = data_main;
 absorptionVolume = emission_main;
+absorptionVolume.normalize(0,1);
 % absorptionVolume=Volume(data_absorption);
 % half_size=size(data_absorption)/2;
 % absorptionVolume.resize(half_size);
 % absorptionVolume.normalize(0,1);
 
-render.VolumeAbsorption=absorptionVolume;
+render.VolumeAbsorption=emission_main;
 render.VolumeEmission=emission_main;
 
-render.VolumePhase=Volume(HenyeyGreenstein_LUT(64));
+% render.VolumePhase=Volume(HenyeyGreenstein_LUT(64));
 
 % setup image size (of the resulting 2D image)
 render.ImageResolution=size(emission_main.Data,[1 2]);
@@ -153,11 +154,13 @@ factor = linspace(1,0.0,n);
 
 sw.add('2', 'main channel #2');
 
-render.VolumeAbsorption = Volume(render.VolumeEmission.Data);
+% render.VolumeAbsorption = Volume(render.VolumeEmission.Data);
+
+% render.VolumeEmission.Data(logical(mask.Data))=0;
 
 for i=start_frame:end_frame
     % disp(strcat(' -image ', num2str(i)));
-    render.VolumeEmission.Data(logical(mask.Data))=factor(i-start_frame+1) * emission_main.Data(logical(mask.Data));
+    render.VolumeEmission.Data(logical(mask.Data))=factor(i-start_frame+1) * render.VolumeEmission.Data(logical(mask.Data));
     
     sw.start('2');
     rendered_image = render.render();
@@ -209,12 +212,13 @@ render.ImageResolution=size(emission_structure.Data,[1 2]);
 
 render.VolumeAbsorption=emission_structure;
 render.VolumeEmission=emission_structure;
+render.VolumeAbsorption.normalize(0,1);
 
 render.FactorEmission=1;
 render.FactorAbsorption=1;
 render.FactorReflection=1;
 
-render.Color = [0,10,0];
+render.Color = [0,1,0];
 
 %% render structure image channel
 
@@ -241,8 +245,8 @@ sw.print();
 
 rendered_images_combined = rendered_images_main+rendered_images_structure;
 
-% normalized_images = VolumeRender.normalizeSequence(rendered_images_combined);
-normalized_images = rendered_images_combined / max(rendered_images_combined(:));
+normalized_images = rendered_images_main+rendered_images_structure;
+% normalized_images = rendered_images_main;
 
 mov = immovie(normalized_images);
 implay(mov, 15);
