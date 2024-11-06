@@ -65,11 +65,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
     for (int a = 0; a < volumeSize; ++a) {
       alpha = a * frac_half;
-      lightOut = make_float3(sinf(alpha), cosf(alpha), 0);
+      lightOut = make_float3(sinf(alpha), 0, cosf(alpha));
 
       for (int b = 0; b < volumeSize; ++b) {
         beta = b * frac_half;
-        lightIn = make_float3(sinf(beta), cosf(beta), 0);
+        lightIn = make_float3(sinf(beta), 0, cosf(beta));
 
         // rotate around X because of the properties of the unit circle
         // x denotes the normal in the later application
