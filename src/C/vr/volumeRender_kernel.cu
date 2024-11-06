@@ -315,7 +315,7 @@ __device__ float3 shade(const float3 &aSamplePosition, const float3 aPosition,
 
   // negativ gradient approx surface normal
   const float3 surfaceNormal =
-      -1 * normalize((gradient_functions[dc_activeGradientMethod])(
+      -1.f * normalize((gradient_functions[dc_activeGradientMethod])(
                aSamplePosition, aPosition, aGradientStep, aBoxmin, aBoxmax,
                aBoxScale));
 
@@ -409,7 +409,7 @@ __global__ void d_render(float *d_aOutput, const vr::RenderOptions aOptions,
   const float3 vCameraOffset = (cameraXOffset * xVector);
 
   // Ray properties
-  eyeRay.origin = vCameraOffset + (-1 * objectDistance * zVector);
+  eyeRay.origin = vCameraOffset + (-1.f * objectDistance * zVector);
 
   eyeRay.direction =
       normalize(u * normalize(xVector) + v * yVector + focalLength * zVector);
