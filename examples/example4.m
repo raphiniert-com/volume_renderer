@@ -83,17 +83,17 @@ render.FactorReflection=1;
 
 render.FocalLength=4.5;
 render.DistanceToObject = 4;
-render.OpacityThreshold=0.95;
+render.OpacityThreshold = 0.95;
 
 % rotate
 render.rotate(-90,270,0);
 render.rotate(-15,15,15);
 
 % setup illumintation
-render.LightSources = LightSource([-15,15,0], [1,1,1]);
+render.LightSources = LightSource([-15,15,0], [0.5,0.5,0.5]);
 
 % setup volumes
-data_absorption = data_main;
+% data_absorption = data_main;
 absorptionVolume=emission_main;
 % absorptionVolume=Volume(data_absorption);
 % half_size=size(data_absorption)/2;
@@ -103,7 +103,7 @@ absorptionVolume=emission_main;
 render.VolumeAbsorption=absorptionVolume;
 render.VolumeEmission=emission_main;
 
-render.VolumeIllumination=Volume(HenyeyGreenstein(64));
+render.VolumeIllumination=Volume(HenyeyGreenstein_LUT(64));
 
 % setup image size (of the resulting 2D image)
 render.ImageResolution=size(emission_main.Data,[1 2]);
@@ -124,6 +124,7 @@ end
 %% start renderung main channel
 % disp('rendering main channel');
 
+
 sw.add('1', 'main channel #1');
 
 start_frame=1;
@@ -140,6 +141,7 @@ for i=start_frame:end_frame
     
     rendered_images_main(:,:,:,i) = rendered_image;
 end
+
 
 % fade out half of the volume
 start_frame=(total_frames/8)+1;
@@ -208,9 +210,10 @@ render.ImageResolution=size(emission_structure.Data,[1 2]);
 render.VolumeAbsorption=emission_structure;
 render.VolumeEmission=emission_structure;
 
-render.FactorEmission=1;
-render.FactorAbsorption=2;
+render.FactorEmission=0.5;
+render.FactorAbsorption=1;
 render.FactorReflection=1;
+
 
 render.Color = [0,1,0];
 
@@ -239,7 +242,7 @@ sw.print();
 
 rendered_images_combined = rendered_images_main+rendered_images_structure;
 
-normalized_images = VolumeRender.normalizeSequence(rendered_images_combined);
+normalized_images = sqrt(VolumeRender.normalizeSequence(rendered_images_combined));
 
 mov = immovie(imcomplement(normalized_images));
 implay(mov, 15);
@@ -249,7 +252,7 @@ v = VideoWriter("brain", 'MPEG-4');
 v.FrameRate=15;
 v.Quality = 100;
 open(v);
-writeVideo(v,normalized_images);
+writeVideo(v,imcomplement(normalized_images));
 close(v);
 
 

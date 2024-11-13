@@ -17,8 +17,7 @@
 #include <vr/volumeRender.h>
 
 
-#define ONE_OVER_2PI ((float)0.1591549430918953357688837633725143620344596457404564)
-#define PI2 ((float)6.2831853071795864769252867665590057683943387987502116)
+#define PI ((float)3.14159265358979323846f)
 
 /*! \var typedef unsigned int uint
  * 	\brief defines abbrev for unsigned int: uint
@@ -284,7 +283,7 @@ __device__ float3 lookupGradient(const float3 aSamplePosition,
  */
 __forceinline__ __device__ float angle(const float3 &a, const float3 &b) {
   // radian to degree
-  return acos(dot(a, b) / (length(a) + length(b)));
+  return acos(dot(a, b) / (length(a) * length(b)));
 }
 
 /*! \fn float3 shade(const float3& aSamplePosition, const float3 aPosition,
@@ -326,19 +325,18 @@ __device__ float3 shade(const float3 &aSamplePosition, const float3 aPosition,
 
     // calculation of angles
     float3 lightPosition = (lightSource.position);
-    float alpha = angle(surfaceNormal, lightPosition) / PI2 *
-                  ONE_OVER_2PI; // normalizing to [0,1]
-    float beta = angle(surfaceNormal, aViewPosition) / PI2 * ONE_OVER_2PI;
-
     float3 lightOut = (lightPosition - aPosition);
     float3 lightIn = (aViewPosition - aPosition);
 
+    float alpha = angle(surfaceNormal, lightIn) / PI; // normalizing to [0,1]
+    float beta = angle(surfaceNormal, lightOut) / PI;
+
     // dot( , ) here: scalar projection of lightOut/lightIn onto surfaceNormal
     float3 lightOutProj =
-        lightPosition - (dot(lightOut, surfaceNormal) * surfaceNormal);
+        lightOut - (dot(lightOut, surfaceNormal) * surfaceNormal);
     float3 lightInProj =
-        aViewPosition - (dot(lightIn, surfaceNormal) * surfaceNormal);
-    float gamma = angle(lightInProj, lightOutProj) * ONE_OVER_2PI;
+        lightIn - (dot(lightIn, surfaceNormal) * surfaceNormal);
+    float gamma = angle(lightInProj, lightOutProj) / PI;
 
     // lookup in tex_reflection
     float reflection =

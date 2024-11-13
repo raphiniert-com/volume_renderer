@@ -63,10 +63,6 @@ render = VolumeRender();
 % setup render options
 render.Color = [1,1,1];
 
-render.FactorEmission=1;
-render.FactorAbsorption=1;
-render.FactorReflection=1;
-
 render.ElementSizeUm=elementSizeUm;
 render.FocalLength=4.5;
 render.DistanceToObject = 6;
@@ -77,7 +73,7 @@ render.rotate(90,0,0);
 render.rotate(-15,15,15);
 
 % setup illumintation
-render.LightSources = LightSource([-15,15,0], [1,1,1]);
+render.LightSources = LightSource([-15,15,0], [0.5,0.5,0.5]);
 
 % setup volumes
 data_absorption = data_main;
@@ -98,6 +94,9 @@ render.ImageResolution=size(emission_main.Data,[1 2]);
 % rotation per step
 beta = rotation_of_movie/total_frames;
 
+render.FactorEmission=1;
+render.FactorAbsorption=1;
+render.FactorReflection=1;
 
 % uncomment this line in order to get a stereo image (anaglyph)
 stereo = false;
@@ -110,6 +109,8 @@ end
 
 %% start renderung main channel
 % disp('rendering main channel');
+
+
 
 sw.add('1', 'main channel #1');
 
@@ -126,6 +127,9 @@ for i=start_frame:end_frame
     render.rotate(0,beta,0);
     
     rendered_images_main(:,:,:,i) = rendered_image;
+
+%     imshow(imcomplement(rendered_image));
+%     return;
 end
 
 % fade out half of the volume
@@ -195,13 +199,13 @@ render.ImageResolution=size(emission_structure.Data,[1 2]);
 render.VolumeAbsorption=emission_structure;
 render.VolumeEmission=emission_structure;
 
-render.FactorEmission=1;
-render.FactorAbsorption=2;
-render.FactorReflection=1;
-
 render.Color = [0,1,0];
 
 %% render structure image channel
+
+render.FactorEmission=0.5;
+render.FactorAbsorption=1;
+render.FactorReflection=1;
 
 sw.add('s', 'structure channel');
 
@@ -218,6 +222,14 @@ for i=start_frame:end_frame
     render.rotate(0,beta,0);
     
     rendered_images_structure(:,:,:,i) = rendered_image;
+
+%     imshow(imcomplement(rendered_image));
+% 
+%     rendered_images_combined = rendered_images_main+rendered_images_structure;
+% 
+%     imshow(imcomplement(rendered_images_combined(:,:,:,1)))
+% 
+%     return;
 end
 
 
@@ -226,9 +238,12 @@ sw.print();
 
 rendered_images_combined = rendered_images_main+rendered_images_structure;
 
-normalized_images = VolumeRender.normalizeSequence(rendered_images_combined);
+amplification_factor=3;
 
-mov = immovie(normalized_images);
+% multiply the values in order to make it better visible after inverting
+normalized_images = sqrt(VolumeRender.normalizeSequence(rendered_images_combined));
+
+mov = immovie(imcomplement(normalized_images));
 implay(mov, 15);
 
 % save to file
@@ -236,7 +251,7 @@ v = VideoWriter("zebrafish", 'MPEG-4');
 v.FrameRate=15;
 v.Quality = 100;
 open(v);
-writeVideo(v,normalized_images);
+writeVideo(v,imcomplement(normalized_images/max(normalized_images(:))));
 close(v);
 
 
@@ -248,6 +263,7 @@ rel_i=int8(linspace(0,360,8)/5);
 for i=1:1:8
     filename=fullfile(workingpath,sprintf('../png/rotation_%d.png', i));
 
-    img_inv = normalized_images(:,:,:,frame_start+rel_i(i));
+    % multiply the values in order to make it better visible after inverting
+    img_inv = imcomplement(normalized_images(:,:,:,frame_start+rel_i(i)));
     imwrite(img_inv, filename);
 end

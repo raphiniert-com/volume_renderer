@@ -49,7 +49,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   mwSize dim[3] = {volumeSize, volumeSize, volumeSize};
   mxArray *resultArray = mxCreateNumericArray(3, dim, mxSINGLE_CLASS, mxREAL);
 
-  float frac_full = PI2 / volumeSize;
   float frac_half = PI / volumeSize;
 
   float *outData = (float *)mxGetPr(resultArray);
@@ -61,7 +60,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   int pageSize = volumeSize * volumeSize;
 
   for (int c = 0; c < volumeSize; ++c) {
-    gamma = c * frac_full;
+    gamma = c * frac_half;
 
     for (int a = 0; a < volumeSize; ++a) {
       alpha = a * frac_half;
@@ -76,13 +75,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         float3x3 rotMatrix = rotateAroundX(gamma);
         float3 lightOutRotated = rotMatrix * lightOut;
 
-        float scalar = dot(lightOutRotated, lightIn);
-
-        float angleRad = acosf(scalar);
+        float cosTheta = dot(lightOutRotated, lightIn);
 
         float numerator = (1.f - powf(aG, 2.f));
         float denominator = sqrtf(
-            powf((1.f + powf(aG, 2.f) - (2.f * aG * cosf(angleRad))), 3.f));
+            powf((1.f + powf(aG, 2.f) - (2.f * aG * cosTheta)), 3.f));
 
         // memory layout described on:
         // http://www.mathworks.de/help/techdoc/matlab_external/f21585.html
