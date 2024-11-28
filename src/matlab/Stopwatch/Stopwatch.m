@@ -1,14 +1,21 @@
 classdef Stopwatch < matlab.mixin.Copyable
-    %STOPWATCH class which can be used to analyse code performance
-    %  
-    % dirived from matlab.mixin.Copyable
-    % use as follows:
-    %  sw = Stopwatch('some title');
-    %  sw.add('x', 'benchmark code snippet x');
-    %  sw.start('x');
-    %  % call some code
-    %  sw.stop('x');
-    %  sw.print();
+    % Stopwatch
+    % 
+    % A utility class for analyzing code performance through time measurement.
+    % Derived from `matlab.mixin.Copyable` to allow deep copying of instances.
+    %
+    % Example Usage:
+    %   sw = Stopwatch('My Stopwatch');
+    %   sw.add('code1', 'Benchmark code snippet 1');
+    %   sw.start('code1');
+    %   % Execute some code here
+    %   sw.stop('code1');
+    %   sw.print(); % Display recorded times
+    %
+    % Features:
+    %   - Add multiple named stopwatch slots for tracking different tasks.
+    %   - Start, stop, reset, and print timing information for each slot.
+    %   - Display results with formatted output.
     
     properties(Access=private)
         name = 'stopwatch';
