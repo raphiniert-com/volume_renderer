@@ -56,16 +56,16 @@ rendered_images_main= zeros([  size(emission_structure.Data,2), ...
 
 absorptionVolume=Volume(data_main);
 absorptionVolume.resize(0.5);
-absorptionVolume.normalize(0,1);
+% absorptionVolume.normalize(0,1);
 
 render.VolumeEmission=emission_main;
 render.VolumeAbsorption=Volume(1);
 
 
 % make it kind of transparent
-render.FactorAbsorption=0.5;
-render.FactorEmission=0.5;
-render.FactorReflection=0.5;
+render.FactorAbsorption=1;
+render.FactorEmission=1;
+render.FactorReflection=1;
 
 
 image = render.render();
@@ -117,7 +117,7 @@ for e = 0:stepsize:10
         
             k = (r/stepsize) * x + (a/stepsize);
 
-            current_img=imcrop(rendered_images_main(:,:,:,e+1, r+1, a+1), win1);
+            current_img=sqrt(imcrop(rendered_images_main(:,:,:,e+1, r+1, a+1), win1));
             filename=fullfile(workingpath,sprintf('../png/%d_%d.png', e, k));
             
             img_inv = imcomplement(current_img);
@@ -156,8 +156,8 @@ for i = 1:6
     yticks([targetSize(1)/4:targetSize(1)/2:10*targetSize(1)])
     yticklabels({'0','0.2','0.4','0.6','0.8','1.0'})
 
-    xlabel('scale absorption', 'FontSize', fontSizeLabelAxis);
-    ylabel('scale reflection', 'FontSize', fontSizeLabelAxis);
+    xlabel('Scale absorption', 'FontSize', fontSizeLabelAxis);
+    ylabel('Scale reflection', 'FontSize', fontSizeLabelAxis);
 
     
 
