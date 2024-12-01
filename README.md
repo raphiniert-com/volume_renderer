@@ -28,7 +28,7 @@ Either, enter `src/matlab` to run code and place your matlab renderer code there
 
 ## Documentation
 In order to generate a [doxygen documentation](https://doxygen.nl) in html, we offer a `Doxyfile`. Install the tool and run `doxygen Doxyfile`.
-The resulting Documentation will be stored in `docs/doxygen`.
+The resulting Documentation will be stored in `docs/doxygen`. Further, in order to get an theoretical understanding of the concepts, read the related published [research paper](https://www.mdpi.com/2673-6470/4/4/49).
 
 ## Example
 The following video demonstrates the power of the renderer:
@@ -54,6 +54,23 @@ Originally, Raphael Scheible started Volume Renderer for use with MATLAB® as a 
 
 ## References
 [1]  <a id="ref1"></a>Ronneberger, O and Liu, K and Rath, M and Ruess, D and Mueller, T and Skibbe, H and Drayer, B and Schmidt, T and Filippi, A and Nitschke, R and Brox, T and Burkhardt, H and Driever, W. **[ViBE-Z: A Framework for 3D Virtual Colocalization Analysis in Zebrafish Larval Brains](http://lmb.informatik.uni-freiburg.de//Publications/2012/RLSDSBB12) .** 2012. _Nature Methods,_ 9(7):735--742. [↩](#r1)
+
+## Citation
+If you use the renderer in your research, please cite the following paper:
+```bibtex
+@Article{digital4040049,
+  AUTHOR = {Scheible, Raphael},
+  TITLE = {GPU-Enabled Volume Renderer for Use with MATLAB},
+  JOURNAL = {Digital},
+  VOLUME = {4},
+  YEAR = {2024},
+  NUMBER = {4},
+  PAGES = {990--1008},
+  URL = {https://www.mdpi.com/2673-6470/4/4/49},
+  ISSN = {2673-6470},
+  DOI = {10.3390/digital4040049}
+}
+```
 
 ---
 
